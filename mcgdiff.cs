@@ -24,8 +24,27 @@ namespace ManagedCodeGen
     
     public class MCGDiff
     {
-        private static string baseRuntimePath;
-        private static string diffRuntimePath;        
+        public static void Main(string[] args)
+        {
+            System.Console.WriteLine("mcgdiff");
+            
+            var options = new Options();
+            
+            if (options != null) {
+                DifferenceEngine diff = new DifferenceEngine(options);
+                diff.GenerateAssemblyWorklist();                            
+                diff.Execute();
+            }
+        }
+
+        class DifferenceEngine {
+            private static string baseExecutablePath;
+            private static string diffExecutablePath;
+            private static string outputPath;
+        
+        private bool generateBase = false;
+        private bool generateDiff = false;
+        private bool outputDiff = false;        
 
         // Define the set of assemblies we care about. NOTE: mscorlib.dll is treated specially.
         // It MUST be first in this array!
@@ -86,50 +105,32 @@ namespace ManagedCodeGen
             "System.Xaml.Hosting",
             "System.Data.Linq",
             "System.ComponentModel.DataAnnotations"
-        };               
+        };
         
-        public static void Main(string[] args)
-        {
-            System.Console.WriteLine("mcgdiff");
-            
-            var options = new Options();
-            
-            if (options != null) {        
-                // Validate base path
-                
-                // Validate diff path
-                
-                // Validate output path
-
-                theList = MakeAssemblyWorklist();            
-                
-                ProduceDiff(theList);
+        List<string> assemblyList = null;
+        
+            public DifferenceEngine(Options options) {
+                    
             }
-        }
-
-       public void ProduceDiff(List<string> assemblies) {
+            
+       public void Execute() {
            if (generateBase)
            {
-                    GenerateAsm(theBase, theList);
+                    GenerateAsm(baseExecutablePath, assemblyList, outputPath);
                 }
                 
                 if (generateDiff)
                 {
-                GenerateAsm(theDiff, theList);
-                }
-                
-                if (ouputDiff)
-                {
-                    
+                GenerateAsm(diffExecutablePath, assemblyList, outputPath);
                 }
        }
         
-        public List<string> MakeAssemblyWorklist() {
-            return null;
+        public void GenerateAssemblyWorklist() {
         }
         
-        public void GenerateAsm(string codegenExe, List<string> assemblies,       string outputPath) {
+        public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath) {
             
+        }
         }
     } 
 }    
