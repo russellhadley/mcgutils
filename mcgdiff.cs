@@ -2,56 +2,60 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 
-namespace ManagedCodeGen 
+namespace ManagedCodeGen
 {
     // Define options to be parsed 
-    class Options {
-        public bool genFrameworkAssemblies { get {return true;} }
-        public string assemblyPath { get {return "assemblyPath";} }
-        
+    class Options
+    {
+        public bool genFrameworkAssemblies { get { return true; } }
+        public string assemblyPath { get { return "assemblyPath"; } }
+
         //[Option('b', "base", Required = false, HelpText = "Base code generator")]
-        public string baseExe { get {return "basePath";} }
+        public string baseExe { get { return "basePath"; } }
         //[Option('d', "diff", Required = false, HelpText = "Diff code generator")]
-        public string diffExe { get {return "diffPath";} }
+        public string diffExe { get { return "diffPath"; } }
         //[Option('o', "output", Required = true, HelpText = "Output Directory")]
-        public string outputPath { get {return "outputPath";} }
-        
+        public string outputPath { get { return "outputPath"; } }
+
         //[HelpOption]
-        public string GetUsage() {
+        public string GetUsage()
+        {
             return "mcgdiff [-f|--frameworks = <path>] | [-a|--assembly = <path>] -b|--base = <base crossgen> -d|--diff = <diff crossgen> -o|--out = <out path>";
         }
     }
-    
+
     public class MCGDiff
     {
         public static void Main(string[] args)
         {
             System.Console.WriteLine("mcgdiff");
-            
+
             var options = new Options();
-            
-            if (options != null) {
+
+            if (options != null)
+            {
                 DifferenceEngine diff = new DifferenceEngine(options);
-                diff.GenerateAssemblyWorklist();                            
+                diff.GenerateAssemblyWorklist();
                 diff.Execute();
             }
         }
 
-        class DifferenceEngine {
-            private static string baseExecutablePath;
-            private static string diffExecutablePath;
-            private static string outputPath;
-        
-        private bool generateBase = false;
-        private bool generateDiff = false;
-        private bool outputDiff = false;        
-
-        // Define the set of assemblies we care about. NOTE: mscorlib.dll is treated specially.
-        // It MUST be first in this array!
-        // Also: #2 must be System, and #3 must be System.Core. This is because all assemblies hard bind to these.
-        // TODO: Does crossgen also require these restrictions??
-        private static string[] frameworkAssemblies =
+        class DifferenceEngine
         {
+            private static string baseExecutablePath = "D:\\dotnet\\coreclr\bin\\Product\\Windows_NT.x64.Debug";
+            private static string diffExecutablePath;
+            private static string outputPath = "D:\\output";
+
+            private bool generateBase = true
+            private bool generateDiff = false;
+            private bool outputDiff = false;
+
+            // Define the set of assemblies we care about. NOTE: mscorlib.dll is treated specially.
+            // It MUST be first in this array!
+            // Also: #2 must be System, and #3 must be System.Core. This is because all assemblies hard bind to these.
+            // TODO: Does crossgen also require these restrictions??
+            private static string[] frameworkAssemblies =
+            {
             "mscorlib",
             "System",
             "System.Core",
@@ -105,32 +109,45 @@ namespace ManagedCodeGen
             "System.Xaml.Hosting",
             "System.Data.Linq",
             "System.ComponentModel.DataAnnotations"
-        };
-        
-        List<string> assemblyList = null;
-        
-            public DifferenceEngine(Options options) {
-                    
+            };
+
+            List<string> assemblyList = null;
+
+            public DifferenceEngine(Options options)
+            {
+
             }
-            
-       public void Execute() {
-           if (generateBase)
-           {
+
+            public void Execute()
+            {
+                if (generateBase)
+                {
                     GenerateAsm(baseExecutablePath, assemblyList, outputPath);
                 }
-                
+
                 if (generateDiff)
                 {
-                GenerateAsm(diffExecutablePath, assemblyList, outputPath);
+                    GenerateAsm(diffExecutablePath, assemblyList, outputPath);
                 }
-       }
-        
-        public void GenerateAssemblyWorklist() {
+            }
+
+            public void GenerateAssemblyWorklist()
+            {
+            }
+
+            public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath)
+            {
+                int numberOfAsseblies = assemblies.Count();
+                string[] cmdArgs;
+                
+                foreach (var assembly in assemblies)
+                {
+                    
+                }
+                
+                Command codegenComand = new Command(codegenExe)
+
+            }
         }
-        
-        public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath) {
-            
-        }
-        }
-    } 
-}    
+    }
+}
