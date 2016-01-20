@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using Microsoft.DotNet.Cli.Utils;
 
 namespace ManagedCodeGen
 {
@@ -46,7 +47,7 @@ namespace ManagedCodeGen
             private static string diffExecutablePath;
             private static string outputPath = "D:\\output";
 
-            private bool generateBase = true
+            private bool generateBase = true;
             private bool generateDiff = false;
             private bool outputDiff = false;
 
@@ -137,16 +138,15 @@ namespace ManagedCodeGen
 
             public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath)
             {
-                int numberOfAsseblies = assemblies.Count();
+                int numberOfAsseblies = assemblies.Count;
                 string[] cmdArgs;
                 
                 foreach (var assembly in assemblies)
                 {
                     
                 }
-                
-                Command codegenComand = new Command(codegenExe)
 
+                Command generateCmd = Command.Create("blah", "");
             }
         }
     }
