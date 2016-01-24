@@ -134,19 +134,21 @@ namespace ManagedCodeGen
 
             public void GenerateAssemblyWorklist()
             {
+               // assemblyList = frameworkAssemblies;
             }
 
             public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath)
             {
-                int numberOfAsseblies = assemblies.Count;
-                string[] cmdArgs;
+                int numberOfAssemblies = assemblies.Count;
+                string cmdArgs = "";
                 
                 foreach (var assembly in assemblies)
                 {
-                    
+                    // Find full path
+                    cmdArgs += assembly;
                 }
 
-                Command generateCmd = Command.Create("blah", "");
+                Command generateCmd = Command.Create("blah", cmdArgs);
             }
         }
     }
