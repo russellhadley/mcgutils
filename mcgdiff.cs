@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using Microsoft.DotNet.Cli.Utils;
@@ -31,6 +32,9 @@ namespace ManagedCodeGen
         {
             System.Console.WriteLine("mcgdiff");
 
+            // Stop to attach a debugger if desired.
+            WaitForDebugger();
+
             var options = new Options();
 
             if (options != null)
@@ -41,8 +45,16 @@ namespace ManagedCodeGen
             }
         }
 
+        private static void WaitForDebugger() {
+            Console.WriteLine("Waiting for debugger to attach. Press ENTER to continue");
+            Console.WriteLine($"Process ID: {Process.GetCurrentProcess().Id}");
+            Console.ReadLine();
+        }
+
         class DifferenceEngine
         {
+            private Options options;
+            
             private static string baseExecutablePath = "D:\\dotnet\\coreclr\bin\\Product\\Windows_NT.x64.Debug";
             private static string diffExecutablePath;
             private static string outputPath = "D:\\output";
@@ -116,7 +128,7 @@ namespace ManagedCodeGen
 
             public DifferenceEngine(Options options)
             {
-
+                this.options = options;
             }
 
             public void Execute()
@@ -134,7 +146,10 @@ namespace ManagedCodeGen
 
             public void GenerateAssemblyWorklist()
             {
-               // assemblyList = frameworkAssemblies;
+                if (options.genFrameworkAssemblies) {
+                    // build list based on baked in list of assemblies
+                    assemblyList = new List<string>(frameworkAssemblies);  
+                }
             }
 
             public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath)
@@ -142,13 +157,31 @@ namespace ManagedCodeGen
                 int numberOfAssemblies = assemblies.Count;
                 string cmdArgs = "";
                 
-                foreach (var assembly in assemblies)
+                int count = 0;
+                foreach(var assembly in assemblies)
                 {
-                    // Find full path
-                    cmdArgs += assembly;
+                    count++;
+                    
+                    if (count == 1) {
+                        // Find full path
+                        cmdArgs = ("D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\" + assembly + ".dll");
+                        break;
+                    }
+                    else {
+                       cmdArgs += (" " + "D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\" + assembly + ".dll");
+                    }
                 }
 
-                Command generateCmd = Command.Create("blah", cmdArgs);
+                Command generateCmd = Command.Create("D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\crossgen.exe", cmdArgs);
+
+                generateCmd.ForwardStdOut();
+                generateCmd.ForwardStdErr();
+
+                generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
+
+                generateCmd.Execute();
+                
+                Console.WriteLine("Executed...");
             }
         }
     }
