@@ -5,8 +5,9 @@
     },
 
     "dependencies": {
-        "NETStandard.Library": "1.0.0-rc2-23714",
-        "Microsoft.DotNet.Cli.Utils": "1.0.0-dev-*"
+        "NETStandard.Library": "1.0.0-rc3-23727",
+        "Microsoft.DotNet.Cli.Utils": "1.0.0-dev-*",
+        "System.CommandLine": "0.1.0-*"
     },
 
     "frameworks": {

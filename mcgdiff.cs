@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.CommandLine;
 using System.IO;
 using System.Collections.Generic;
 using Microsoft.DotNet.Cli.Utils;
@@ -7,7 +8,7 @@ using Microsoft.DotNet.Cli.Utils;
 namespace ManagedCodeGen
 {
     // Define options to be parsed 
-    class Options
+    class Config
     {
         public bool genFrameworkAssemblies { get { return true; } }
         public string assemblyPath { get { return "assemblyPath"; } }
@@ -18,42 +19,54 @@ namespace ManagedCodeGen
         public string diffExe { get { return "diffPath"; } }
         //[Option('o', "output", Required = true, HelpText = "Output Directory")]
         public string outputPath { get { return "outputPath"; } }
-
-        //[HelpOption]
-        public string GetUsage()
-        {
-            return "mcgdiff [-f|--frameworks = <path>] | [-a|--assembly = <path>] -b|--base = <base crossgen> -d|--diff = <diff crossgen> -o|--out = <out path>";
-        }
     }
 
     public class MCGDiff
     {
         public static void Main(string[] args)
         {
+            var baseExe = "";
+            var diffExe = "";
+            var outputPath = "d:\\\\output\\";
+            var assemblyName = "";
+            
+            // App name is currently not derived correctly due to some API issues - this
+            // will be fixed in the future.
+            ArgumentSyntax.Parse(args, syntax =>
+            {
+                syntax.DefineOption("b|base", ref baseExe, "The base crossgen exe");
+                syntax.DefineOption("d|diff", ref diffExe,  "The diff crossgen exe");
+                syntax.DefineOption("o|output", ref outputPath, "The output path");
+                
+                syntax.DefineParameter("assembly", ref assemblyName, "The assembly to asm diff"); 
+            });
+            
             System.Console.WriteLine("mcgdiff");
 
             // Stop to attach a debugger if desired.
-            WaitForDebugger();
+            //WaitForDebugger();
 
-            var options = new Options();
+            var config = new Config();
 
-            if (options != null)
+            // set config values based on arguments.
+
+            if (config != null)
             {
-                DifferenceEngine diff = new DifferenceEngine(options);
+                DifferenceEngine diff = new DifferenceEngine(config);
                 diff.GenerateAssemblyWorklist();
                 diff.Execute();
             }
         }
 
         private static void WaitForDebugger() {
-            Console.WriteLine("Waiting for debugger to attach. Press ENTER to continue");
+            Console.WriteLine("Wait for a debugger to attach. Press ENTER to continue");
             Console.WriteLine($"Process ID: {Process.GetCurrentProcess().Id}");
             Console.ReadLine();
         }
 
         class DifferenceEngine
         {
-            private Options options;
+            private Config config;
             
             private static string baseExecutablePath = "D:\\dotnet\\coreclr\bin\\Product\\Windows_NT.x64.Debug";
             private static string diffExecutablePath;
@@ -126,9 +139,9 @@ namespace ManagedCodeGen
 
             List<string> assemblyList = null;
 
-            public DifferenceEngine(Options options)
+            public DifferenceEngine(Config config)
             {
-                this.options = options;
+                this.config = config;
             }
 
             public void Execute()
@@ -146,42 +159,37 @@ namespace ManagedCodeGen
 
             public void GenerateAssemblyWorklist()
             {
-                if (options.genFrameworkAssemblies) {
+                if (config.genFrameworkAssemblies) {
                     // build list based on baked in list of assemblies
                     assemblyList = new List<string>(frameworkAssemblies);  
                 }
             }
 
             public void GenerateAsm(string codegenExe, List<string> assemblies, string outputPath)
-            {
-                int numberOfAssemblies = assemblies.Count;
-                string cmdArgs = "";
-                
-                int count = 0;
-                foreach(var assembly in assemblies)
-                {
-                    count++;
+            {   
+                // Build a command per assembly to generate the asm output
+              
+                foreach(var assembly in assemblies) {
+                    string fullpathAssembly = "D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\" + assembly + ".dll";
+                    List<string> commandArgs = new List<string>() {fullpathAssembly};
+
+                    Command generateCmd = Command.Create(
+                        "D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\crossgen.exe", 
+                        commandArgs);
+
+                    // Generate stream writer for the output file
                     
-                    if (count == 1) {
-                        // Find full path
-                        cmdArgs = ("D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\" + assembly + ".dll");
-                        break;
-                    }
-                    else {
-                       cmdArgs += (" " + "D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\" + assembly + ".dll");
-                    }
-                }
+                    StreamWriter outputFile = new StreamWriter(outputPath + assembly + ".asm");
+                    
+                    generateCmd.ForwardStdOut(outputFile);
+                    generateCmd.ForwardStdErr(outputFile);
 
-                Command generateCmd = Command.Create("D:\\dotnet\\coreclr\\bin\\Product\\Windows_NT.x64.Debug\\crossgen.exe", cmdArgs);
+                    generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
 
-                generateCmd.ForwardStdOut();
-                generateCmd.ForwardStdErr();
-
-                generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
-
-                generateCmd.Execute();
+                    generateCmd.Execute();
                 
-                Console.WriteLine("Executed...");
+                    Console.WriteLine("Finished processing {0}.", assembly);
+                }
             }
         }
     }
