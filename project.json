@@ -5,12 +5,14 @@
     },
 
     "dependencies": {
-        "NETStandard.Library": "1.0.0-rc3-23727",
+        "NETStandard.Library": "1.0.0-rc2-*",
         "Microsoft.DotNet.Cli.Utils": "1.0.0-dev-*",
         "System.CommandLine": "0.1.0-*"
     },
 
     "frameworks": {
-        "dnxcore50": { }
+        "dnxcore50": {
+            "imports": "portable-net451+win8"
+         }
     }
 }
