@@ -14,7 +14,9 @@ namespace ManagedCodeGen
         private bool genFrameworkAssemblies = true;
         private string baseExe = "crossgen.exe";
         private string diffExe = null;
+        private string compExe = null;
         private string rootPath = null;
+        private string tag = null;
         private IReadOnlyList<string> assemblyList = Array.Empty<string>();
         private bool wait = false;
         private bool recursive = false;
@@ -26,9 +28,11 @@ namespace ManagedCodeGen
             var result = ArgumentSyntax.Parse(args, syntax =>
             {
                 syntax.DefineOption("f|frameworks", ref genFrameworkAssemblies, "Generate asm for default framework assemblies");
-                syntax.DefineOption("b|base", ref baseExe, "The base crossgen exe.");
-                syntax.DefineOption("d|diff", ref diffExe,  "The diff crossgen exe.");
+                syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
+                syntax.DefineOption("d|diff", ref diffExe,  "The diff compiler exe.");
+                syntax.DefineOption("c|compiler", ref compExe, "The compiler exe to generate with");
                 syntax.DefineOption("o|output", ref rootPath, "The output path.");
+                syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
                 syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
                 syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursivly.");
                 syntax.DefineOptionList("m|methods", ref methods, "List of methods to disasm.");
