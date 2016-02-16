@@ -23,23 +23,24 @@ namespace ManagedCodeGen
         private IReadOnlyList<string> methods = Array.Empty<string>();
         
         public Config(string[] args) {
+
             // App name is currently not derived correctly due to some API issues - this
             // will be fixed in the future.
             var result = ArgumentSyntax.Parse(args, syntax =>
             {
                 syntax.DefineOption("f|frameworks", ref genFrameworkAssemblies, "Generate asm for default framework assemblies");
                 syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
-                syntax.DefineOption("d|diff", ref diffExe,  "The diff compiler exe.");
+                syntax.DefineOption("d|diff", ref diffExe, "The diff compiler exe.");
                 syntax.DefineOption("c|compiler", ref compExe, "The compiler exe to generate with");
                 syntax.DefineOption("o|output", ref rootPath, "The output path.");
                 syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
                 syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
                 syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursivly.");
                 syntax.DefineOptionList("m|methods", ref methods, "List of methods to disasm.");
-                
-                syntax.DefineParameterList("assembly", ref assemblyList, "The list of assemblies or directories to scan for assemblies."); 
+
+                syntax.DefineParameterList("assembly", ref assemblyList, "The list of assemblies or directories to scan for assemblies.");
             });
-            
+
             System.Console.WriteLine("Parsing commandline:");
 
             System.Console.WriteLine("base: {0}", baseExe);
@@ -77,6 +78,8 @@ namespace ManagedCodeGen
     {
         public static void Main(string[] args)
         {
+            WaitForDebugger();
+            
             // Parse and store comand line options.
             var config = new Config(args);
 
