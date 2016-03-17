@@ -71,7 +71,7 @@ namespace ManagedCodeGen
                 var waitArg = syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
                 waitArg.IsHidden = true;
                 
-                syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursivly.");
+                syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursively.");
                 var methodsArg = syntax.DefineOptionList("m|methods", ref methods, "List of methods to disasm.");
                 methodsArg.IsHidden = true;
                 
