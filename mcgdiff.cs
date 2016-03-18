@@ -58,8 +58,6 @@ namespace ManagedCodeGen
         
         public Config(string[] args) {
 
-            // App name is currently not derived correctly due to some API issues - this
-            // will be fixed in the future.
             syntaxResult = ArgumentSyntax.Parse(args, syntax =>
             {
                 syntax.DefineOption("f|frameworks", ref genFrameworkAssemblies, "Generate asm for default framework assemblies");
@@ -255,57 +253,59 @@ namespace ManagedCodeGen
             Console.ReadLine();
         }
        
-
-            public static List<AssemblyInfo> GenerateAssemblyWorklist(Config config)
-            {
-                List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
+        public static List<AssemblyInfo> GenerateAssemblyWorklist(Config config)
+        {
+            List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
                 
-                if (config.GenFrameworkAssemblies) {
-                    // TODO get a path to a scratch project that pulls down the full list.  
-                    // For now we just will use mscorlib.
-                    var basePath = Path.GetDirectoryName(config.BaseExecutable);
+            if (config.GenFrameworkAssemblies) {
+                // TODO get a path to a scratch project that pulls down the full list.  
+                // For now we just will use mscorlib.
+                var basePath = Path.GetDirectoryName(config.BaseExecutable);
                     
-                    // build list based on baked in list of assemblies                    
-                    foreach (var assembly in frameworkAssemblies) {
-                        // find assembly path, and compute output path.
+                // build list based on baked in list of assemblies                    
+                foreach (var assembly in frameworkAssemblies) {
+                    // find assembly path, and compute output path.
+                    AssemblyInfo info = new AssemblyInfo {
+                        Name = assembly,
+                        Path = basePath,
+                        OutputPath =  ""
+                    };
+                        
+                    assemblyInfoList.Add(info);
+                }  
+            }
+
+            if (config.GenUserAssemblies) {
+                var assemblyList = config.AssemblyList;
+                Queue<string> workList = new Queue<string>(assemblyList); 
+                    
+                while (workList.Count != 0)
+                {
+                    var path = workList.Dequeue();
+                    
+                    FileAttributes attr = File.GetAttributes(path);
+            
+                    if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
+                        // This is directory case.
+                        System.Console.WriteLine("NYI - directory case");
+                        Environment.Exit(-1);
+                    }
+                    else {
+                        // This is the file case.
+
                         AssemblyInfo info = new AssemblyInfo {
-                            Name = assembly,
-                            Path = basePath,
-                            OutputPath =  ""
-                        };
-                        
-                        assemblyInfoList.Add(info);
-                    }  
-                }
-
-                if (config.GenUserAssemblies) {
-                    var assemblyList = config.AssemblyList;      
-                    
-                    foreach (var path in assemblyList)
-                    {
-                        FileAttributes attr = File.GetAttributes(path);
-                        
-                        if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
-                            // This is directory case.
-                            System.Console.WriteLine("NYI - directory case");
-                            Environment.Exit(-1);
-                        }
-                        else {
-                            // This is the file case.
-
-                            AssemblyInfo info = new AssemblyInfo {
                             Name = Path.GetFileName(path),
                             Path = Path.GetDirectoryName(path),
                             OutputPath = ""
-                            };
+                        };
                             
-                            assemblyInfoList.Add(info);
-                        }
+                        assemblyInfoList.Add(info);
                     }
                 }
-                
-                return assemblyInfoList;
             }
+                
+            return assemblyInfoList;
+        }       
 
         class DisasmEngine
         {   
