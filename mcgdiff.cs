@@ -276,17 +276,16 @@ namespace ManagedCodeGen
             }
 
             if (config.GenUserAssemblies) {
-                var assemblyList = config.AssemblyList;
-                Queue<string> workList = new Queue<string>(assemblyList); 
+                var assemblyList = config.AssemblyList;      
                     
-                while (workList.Count != 0)
+                foreach (var path in assemblyList)
                 {
-                    var path = workList.Dequeue();
-                    
                     FileAttributes attr = File.GetAttributes(path);
             
                     if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
-                        // This is directory case.
+                        
+                        // For the directory case create a stack and recursively find any
+                        // assemblies for compilation.
                         System.Console.WriteLine("NYI - directory case");
                         Environment.Exit(-1);
                     }
@@ -304,6 +303,43 @@ namespace ManagedCodeGen
                 }
             }
                 
+            return assemblyInfoList;
+        }
+        
+        // Recursivly search for assemblies from a root path.
+        private static List<AssemblyInfo> RecursivelyIdentifyAssemblies(string rootPath) {
+            List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
+            Queue<string> workList = new Queue<string>();
+            
+            // Enqueue the base case
+            workList.Enqueue(rootPath);
+            
+            while (workList.Count == 0)
+            {
+                string current = workList.Dequeue();
+                string[] subFiles = Directory.GetFiles(current);
+            
+                foreach (var filePath in subFiles)
+                {
+                    string fileName = Path.GetFileName(filePath);
+                    string directoryName = Path.GetDirectoryName(filePath);
+                
+                    AssemblyInfo info = new AssemblyInfo {
+                        Name = fileName,
+                        Path = directoryName,
+                        OutputPath = "" // TODO make appropraite output dir.
+                    };
+                
+                    assemblyInfoList.Add(info);
+                }
+            
+                string[] subDirectories = Directory.GetDirectories(rootPath);
+                
+                foreach (var subDir in subDirectories) {
+                    workList.Enqueue(subDir);
+                }
+            }
+
             return assemblyInfoList;
         }       
 
