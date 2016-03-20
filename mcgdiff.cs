@@ -16,11 +16,10 @@
 //  allowed in the case where a single compiler is passed to avoid any
 //  confusion in the generated results.
 //
-//  usage: mcgdiff [-f] [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-r]
+//  usage: mcgdiff [-c] [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-r]
 //                 [--] <assembly>...
 //
-//      -f, --frameworks          Generate asm for default framework
-//                                assemblies
+//      -c, --corelib             Generate asm for corelib assemblies.
 //      -b, --base <arg>          The base compiler exe.
 //      -d, --diff <arg>          The diff compiler exe.
 //      -o, --output <arg>        The output path.
@@ -46,7 +45,7 @@ namespace ManagedCodeGen
     public class Config
     {
         private ArgumentSyntax syntaxResult;
-        private bool genFrameworkAssemblies = false;
+        private bool genCorelib = false;
         private string baseExe = null;
         private string diffExe = null;
         private string rootPath = null;
@@ -60,7 +59,7 @@ namespace ManagedCodeGen
 
             syntaxResult = ArgumentSyntax.Parse(args, syntax =>
             {
-                syntax.DefineOption("f|frameworks", ref genFrameworkAssemblies, "Generate asm for default framework assemblies");
+                syntax.DefineOption("c|corelib", ref genCorelib, "Generate asm for corelib assemblies");
                 syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
                 syntax.DefineOption("d|diff", ref diffExe, "The diff compiler exe.");
                 syntax.DefineOption("o|output", ref rootPath, "The output path.");
@@ -102,12 +101,30 @@ namespace ManagedCodeGen
                 syntaxResult.ReportError("Multiple compilers with the same tag: Specify --diff OR --base seperatly with --tag (one compiler for one tag).");
             }
             
-            if ((genFrameworkAssemblies == false) && (assemblyList.Count == 0)) {
+            if ((genCorelib == false) && (assemblyList.Count == 0)) {
                 syntaxResult.ReportError("No input: Specify --frameworks or input assemblies.");
+            }
+            
+            // Check that we can find the baseExe.
+            if (!File.Exists(baseExe)) {
+                syntaxResult.ReportError("Can't find --base tool.");   
+            } else {
+                // Set to full path for the command resolution logic.
+                string fullBasePath = Path.GetFullPath(baseExe);
+                baseExe = fullBasePath;
+            }
+            
+            // Check that we can find the diffExe.
+            if (!File.Exists(diffExe)) {
+                syntaxResult.ReportError("Can't find --diff tool.");
+            } else {
+                // Set to full path for command resolution logic.
+                string fullDiffPath = Path.GetFullPath(diffExe);
+                diffExe = fullDiffPath;
             }
         }
         
-        public bool GenFrameworkAssemblies { get { return genFrameworkAssemblies; }}
+        public bool GenCorelib { get { return genCorelib; }}
         public bool GenUserAssemblies { get { return AssemblyList.Count > 0; }}
         public bool DoFileOutput { get {return (this.RootPath != null);}}
         public bool WaitForDebugger { get { return wait; }}
@@ -137,64 +154,9 @@ namespace ManagedCodeGen
             // It MUST be first in this array!
             // Also: #2 must be System, and #3 must be System.Core. This is because all assemblies hard bind to these.
             // TODO: Does crossgen also require these restrictions??
-            private static string[] frameworkAssemblies =
+            private static string[] corelibAssemblies =
             {
             "mscorlib.dll"
-#if false
-            ,
-            "System",
-            "System.Core",
-            "System.Configuration",
-            "System.Security",
-            "System.Xml",
-            "System.Data.SqlXml",
-            "System.Numerics",
-            "System.Drawing",
-            "System.Runtime.Serialization.Formatters.Soap",
-            "Accessibility",
-            "System.Deployment",
-            "System.Windows.Forms",
-            "System.Data",
-            "System.EnterpriseServices",
-            "System.Runtime.Remoting",
-            "System.DirectoryServices",
-            "System.Transactions",
-            "System.Web",
-            "System.Xaml",
-            "Microsoft.VisualC",
-            "Microsoft.Build.Framework",
-            "System.Runtime.Caching",
-            "System.Web.ApplicationServices",
-            "System.Web.Services",
-            "System.Design",
-            "System.Drawing.Design",
-            "System.Web.RegularExpressions",
-            "System.DirectoryServices.Protocols",
-            "System.ServiceProcess",
-            "System.Configuration.Install",
-            "System.Runtime.Serialization",
-            "System.ServiceModel.Internals",
-            "SMDiagnostics",
-            "System.Data.OracleClient",
-            "System.Runtime.DurableInstancing",
-            "System.IdentityModel.Selectors",
-            "System.Xml.Linq",
-            "System.ServiceModel",
-            "System.Messaging",
-            "System.IdentityModel",
-            "Microsoft.Transactions.Bridge",
-            "System.ServiceModel.Activation",
-            "System.ServiceModel.Activities",
-            "System.Activities",
-            "Microsoft.VisualBasic",
-            "System.Management",
-            "Microsoft.JScript",
-            "System.Net.Http",
-            "System.Activities.DurableInstancing",
-            "System.Xaml.Hosting",
-            "System.Data.Linq",
-            "System.ComponentModel.DataAnnotations"
-#endif
             };
 
         
@@ -257,13 +219,13 @@ namespace ManagedCodeGen
         {
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
                 
-            if (config.GenFrameworkAssemblies) {
+            if (config.GenCorelib) {
                 // TODO get a path to a scratch project that pulls down the full list.  
                 // For now we just will use mscorlib.
                 var basePath = Path.GetDirectoryName(config.BaseExecutable);
                     
                 // build list based on baked in list of assemblies                    
-                foreach (var assembly in frameworkAssemblies) {
+                foreach (var assembly in corelibAssemblies) {
                     // find assembly path, and compute output path.
                     AssemblyInfo info = new AssemblyInfo {
                         Name = assembly,

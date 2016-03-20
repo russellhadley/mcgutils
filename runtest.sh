@@ -11,7 +11,7 @@
 # work with --frameworks and that the output is generated with the correct 
 # 'base' and 'diff' tags.
 
-set -x #echo on
+#set -x #echo on
 
 # Process the incoming arguments and extract the location info needed.
 
@@ -52,19 +52,31 @@ fi
 
 # Create disasm of mscorlib in base/diff form.
 
-if ! $MCGDIFF --frameworks --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT; then
+echo Running: $MCGDIFF --corelib --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT
+
+if ! $MCGDIFF --corelib --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT; then
     echo "Error! Managed code gen diff failed to generate disasm."
+    exit -1
 fi
 
 # test that output has 'base' and 'diff' and
 # that mscorlib.dasm appears.
 
-ls $OUTPUT/base/mscorlib.dasm || echo "missing base disasm!"
+if ! ls $OUTPUT/base/mscorlib.dasm; then 
+    echo "missing base disasm!"
+    exit -1
+fi
 
-ls $OUTPUT/diff/mscorlib.dasm || echo "missing diff disasm!"
+if ! ls $OUTPUT/diff/mscorlib.dasm; then
+    echo "missing diff disasm!"
+    exit -1
+fi
 
 # verify that mscorlib.dasm is nodiff.
 
 if ! diff $OUTPUT/diff/mscorlib.dasm $OUTPUT/base/mscorlib.dasm; then
     echo "Error! Found differences."
+    exit -1
 fi
+
+echo mcgdiff passed validation.
