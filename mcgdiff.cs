@@ -105,22 +105,30 @@ namespace ManagedCodeGen
                 syntaxResult.ReportError("No input: Specify --frameworks or input assemblies.");
             }
             
+            if (genCorelib && baseExe == null) {
+                syntaxResult.ReportError("Specify --base so base corelib can be located.");
+            }
+            
             // Check that we can find the baseExe.
-            if (!File.Exists(baseExe)) {
-                syntaxResult.ReportError("Can't find --base tool.");   
-            } else {
-                // Set to full path for the command resolution logic.
-                string fullBasePath = Path.GetFullPath(baseExe);
-                baseExe = fullBasePath;
+            if (baseExe != null) {
+                if (!File.Exists(baseExe)) {
+                    syntaxResult.ReportError("Can't find --base tool.");   
+                } else {
+                    // Set to full path for the command resolution logic.
+                    string fullBasePath = Path.GetFullPath(baseExe);
+                    baseExe = fullBasePath;
+                }
             }
             
             // Check that we can find the diffExe.
-            if (!File.Exists(diffExe)) {
-                syntaxResult.ReportError("Can't find --diff tool.");
-            } else {
-                // Set to full path for command resolution logic.
-                string fullDiffPath = Path.GetFullPath(diffExe);
-                diffExe = fullDiffPath;
+            if (diffExe != null) {
+                if (!File.Exists(diffExe)) {
+                    syntaxResult.ReportError("Can't find --diff tool.");
+                } else {
+                    // Set to full path for command resolution logic.
+                    string fullDiffPath = Path.GetFullPath(diffExe);
+                    diffExe = fullDiffPath;
+                }
             }
         }
         
@@ -220,8 +228,7 @@ namespace ManagedCodeGen
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
                 
             if (config.GenCorelib) {
-                // TODO get a path to a scratch project that pulls down the full list.  
-                // For now we just will use mscorlib.
+                
                 var basePath = Path.GetDirectoryName(config.BaseExecutable);
                     
                 // build list based on baked in list of assemblies                    
@@ -303,6 +310,12 @@ namespace ManagedCodeGen
 
                     // Set up environment do disasm.
                     generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
+                    generateCmd.EnvironmentVariable("COMPlus_UnwindDump", "*");
+                    generateCmd.EnvironmentVariable("COMPlus_NgenEHDump", "*");
+                    generateCmd.EnvironmentVariable("COMPlus_NgenOrder", "1");
+                    generateCmd.EnvironmentVariable("COMPlus_NgenGCDump", "*");
+                    generateCmd.EnvironmentVariable("COMPlus_JitDiffableDasm", "1");
+                    generateCmd.EnvironmentVariable("COMPlus_ZapSet", "dif");
 
                     if (this.rootPath != null) {
                         // Generate path to the output file
