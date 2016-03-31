@@ -16,10 +16,9 @@
 //  allowed in the case where a single compiler is passed to avoid any
 //  confusion in the generated results.
 //
-//  usage: mcgdiff [-c] [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-r]
+//  usage: mcgdiff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-r]
 //                 [--] <assembly>...
 //
-//      -c, --corelib             Generate asm for corelib assemblies.
 //      -b, --base <arg>          The base compiler exe.
 //      -d, --diff <arg>          The diff compiler exe.
 //      -o, --output <arg>        The output path.
@@ -47,12 +46,11 @@ namespace ManagedCodeGen
     public class Config
     {
         private ArgumentSyntax syntaxResult;
-        private bool genCorelib = false;
         private string baseExe = null;
         private string diffExe = null;
         private string rootPath = null;
         private string tag = null;
-        private string filename = null;
+        private string fileName = null;
         private IReadOnlyList<string> assemblyList = Array.Empty<string>();
         private bool wait = false;
         private bool recursive = false;
@@ -63,12 +61,11 @@ namespace ManagedCodeGen
 
             syntaxResult = ArgumentSyntax.Parse(args, syntax =>
             {
-                syntax.DefineOption("c|corelib", ref genCorelib, "Generate asm for corelib assemblies");
                 syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
                 syntax.DefineOption("d|diff", ref diffExe, "The diff compiler exe.");
                 syntax.DefineOption("o|output", ref rootPath, "The output path.");
                 syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
-                //syntax.DefineOption("f|file", ref filename, "Name of file to take list of assemblies from.");
+                syntax.DefineOption("f|file", ref fileName, "Name of file to take list of assemblies from. Both a file and assembly list can be used.");
                 
                 var waitArg = syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
                 waitArg.IsHidden = true;
@@ -92,11 +89,12 @@ namespace ManagedCodeGen
         // Validate supported scenarios
         // 
         //    Scenario 1:  --base and --diff
-        //       Pass two tools in and generate a set of disassembly with each.  Result directories will be tagged with
-        //       "base" and "diff" in the output dir.
+        //       Pass two tools in and generate a set of disassembly with each.  Result directories
+        //       will be tagged with "base" and "diff" in the output dir.
         //
         //    Scenario 2:  --base or --diff with --tag
-        //       Pass single tool as either --base or --diff and tag the result directory with a user supplied tag.
+        //       Pass single tool as either --base or --diff and tag the result directory with a user
+        //       supplied tag.
         //
         private void validate() {
             
@@ -108,12 +106,8 @@ namespace ManagedCodeGen
                 syntaxResult.ReportError("Multiple compilers with the same tag: Specify --diff OR --base seperatly with --tag (one compiler for one tag).");
             }
             
-            if ((genCorelib == false) && (assemblyList.Count == 0)) {
-                syntaxResult.ReportError("No input: Specify --frameworks or input assemblies.");
-            }
-            
-            if (genCorelib && baseExe == null) {
-                syntaxResult.ReportError("Specify --base so base corelib can be located.");
+            if ((fileName == null) && (assemblyList.Count == 0)) {
+                syntaxResult.ReportError("No input: Specify --file <arg> or list input assemblies.");
             }
             
             // Check that we can find the baseExe.
@@ -137,23 +131,29 @@ namespace ManagedCodeGen
                     diffExe = fullDiffPath;
                 }
             }
+            
+            if (fileName != null) {
+                if (!File.Exists(fileName)) {
+                    var message = String.Format("Error reading input file {0}, file not found.", fileName);
+                    syntaxResult.ReportError(message);
+                }
+            }
         }
         
-        public bool GenCorelib { get { return genCorelib; }}
-        public bool GenUserAssemblies { get { return AssemblyList.Count > 0; }}
+        public bool HasUserAssemblies { get { return AssemblyList.Count > 0; }}
         public bool DoFileOutput { get {return (this.RootPath != null);}}
         public bool WaitForDebugger { get { return wait; }}
         public bool GenerateBaseline { get { return (baseExe != null); }}
         public bool GenerateDiff { get { return (diffExe != null); }}
         public bool HasTag { get { return (tag != null); }}
         public bool Recursive { get { return recursive; }}
-        public bool UseFileName { get { return (filename != null); }}
+        public bool UseFileName { get { return (fileName != null); }}
         public string BaseExecutable { get { return baseExe; }}
         public string DiffExecutable { get { return diffExe; }}
         public string RootPath { get { return rootPath; }}
         public string PlatformPath { get {return platformPath; }}
         public string Tag { get { return tag; }}
-        public string FileName { get { return filename; }}
+        public string FileName { get { return fileName; }}
         public IReadOnlyList<string> AssemblyList { get { return assemblyList; }}
     }
 
@@ -167,48 +167,13 @@ namespace ManagedCodeGen
     }
 
     public class mcgdiff
-    {
-            // Define the set of assemblies we care about. NOTE: mscorlib.dll is treated specially.
-            // It MUST be first in this array!
-            // Also: #2 must be System, and #3 must be System.Core. This is because all assemblies hard bind to these.
-            // TODO: Does crossgen also require these restrictions??
-            private static string[] corelibAssemblies =
-            {
-            "mscorlib.dll",
-            "System.dll",
-            "System.Core.dll",
-            "System.Runtime.dll",
-            "System.Runtime.Extensions.dll",
-            "System.Runtime.Handles.dll",
-            "System.Runtime.InteropServices.dll",
-            "System.Runtime.InteropServices.PInvoke.dll",
-            "System.Runtime.InteropServices.RuntimeInformation.dll",
-            "System.Runtime.Numerics.dll",
-            "System.Runtime.Serialization.Primitives.dll",
-            "Microsoft.CodeAnalysis.dll",
-            "Microsoft.CodeAnalysis.CSharp.dll",
-            "System.Collections.dll",
-            "System.Collections.Immutable.dll",
-            "System.Collections.ni.dll",
-            "System.Collections.NonGeneric.dll",
-            "System.Collections.Specialized.dll",
-            "System.ComponentModel.dll",
-            "System.Console.dll",
-            "System.Numerics.Vectors.dll",
-            "System.Text.Encoding.dll",
-            "System.Text.Encoding.Extensions.dll",
-            "System.Text.RegularExpressions.dll",
-            "System.Xml.dll",
-            "System.Xml.Linq.dll",
-            "System.Xml.ReaderWriter.dll",
-            "System.Xml.XDocument.dll",
-            "System.Xml.XmlDocument.dll",
-            "System.Xml.XmlSerializer.dll"
-            };
-
-        
-        public static void Main(string[] args)
+    {   
+        public static int Main(string[] args)
         {
+            // Error count will be returned.  Start at 0 - this will be incremented
+            // based on the error counts derived from the DisasmEngine executions.
+            int errorCount = 0;
+            
             // Parse and store comand line options.
             var config = new Config(args);
 
@@ -237,6 +202,11 @@ namespace ManagedCodeGen
                 
                 DisasmEngine baseDisasm = new DisasmEngine(config.BaseExecutable, config.PlatformPath, taggedPath, assemblyWorkList);
                 baseDisasm.GenerateAsm();
+
+                if (baseDisasm.ErrorCount > 0) {
+                    Console.WriteLine("{0} errors compiling base set.", baseDisasm.ErrorCount);
+                    errorCount += baseDisasm.ErrorCount;
+                }
             }
             
             if (config.GenerateDiff) {
@@ -252,8 +222,14 @@ namespace ManagedCodeGen
                 
                 DisasmEngine diffDisasm = new DisasmEngine(config.DiffExecutable, config.PlatformPath, taggedPath, assemblyWorkList);
                 diffDisasm.GenerateAsm();
+                
+                if (diffDisasm.ErrorCount > 0) {
+                    Console.WriteLine("{0} errors compiling diff set.", diffDisasm.ErrorCount);
+                    errorCount += diffDisasm.ErrorCount;
+                }
             }
 
+            return errorCount;
         }
 
         private static void WaitForDebugger() {
@@ -264,55 +240,65 @@ namespace ManagedCodeGen
        
         public static List<AssemblyInfo> GenerateAssemblyWorklist(Config config)
         {
+            List<string> assemblyList = new List<string>(); 
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
-                
-            if (config.GenCorelib) {
-                
-                var platformPath = Path.GetDirectoryName(config.BaseExecutable);
-                    
-                // build list based on baked in list of assemblies                    
-                foreach (var assembly in corelibAssemblies) {
-                    // find assembly path, and compute output path.
-                    AssemblyInfo info = new AssemblyInfo {
-                        Name = assembly,
-                        Path = Path.GetFullPath(config.PlatformPath),
-                        OutputPath =  ""
-                    };
-                        
-                    assemblyInfoList.Add(info);
-                }  
-            }
 
-            if (config.GenUserAssemblies) {
-                var assemblyList = config.AssemblyList;      
-                    
-                foreach (var path in assemblyList)
-                {
-                    FileAttributes attr = File.GetAttributes(path);
-            
-                    if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
-                        
-                        // For the directory case create a stack and recursively find any
-                        // assemblies for compilation.
-                        List<AssemblyInfo> directoryAssemblyInfoList = RecursivelyIdentifyAssemblies(path);
-                        
-                        // Add info generated at this directory
-                        assemblyInfoList.AddRange(directoryAssemblyInfoList);
-                    }
-                    else {
-                        // This is the file case.
-
-                        AssemblyInfo info = new AssemblyInfo {
-                            Name = Path.GetFileName(path),
-                            Path = Path.GetDirectoryName(path),
-                            OutputPath = ""
-                        };
+            if (config.UseFileName)
+            {
+                assemblyList = new List<string>();
+                string inputFile = config.FileName;
+                
+                // Open file, read assemblies one per line, and add them to the assembly list.
+                using (var inputStream = System.IO.File.Open(inputFile, FileMode.Open)) {
+                    using (var inputStreamReader = new StreamReader(inputStream)) {
+                        string line;
+                        while ((line = inputStreamReader.ReadLine()) != null) {
+                            // Each line is a path to an assembly.
+                            if (!File.Exists(line))
+                            {
+                                Console.WriteLine("Can't find {0} skipping...", line);
+                                continue;
+                            }
                             
-                        assemblyInfoList.Add(info);
+                            assemblyList.Add(line);
+                        }
                     }
                 }
             }
-                
+
+            if (config.HasUserAssemblies) {
+                // Append command line assemblies
+                assemblyList.AddRange(config.AssemblyList);
+            }
+
+            // Process worklist and produce the info needed for the disasm engines.
+            foreach (var path in assemblyList)
+            {
+                FileAttributes attr = File.GetAttributes(path);
+            
+                if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
+                        
+                    // For the directory case create a stack and recursively find any
+                    // assemblies for compilation.
+                    List<AssemblyInfo> directoryAssemblyInfoList = IdentifyAssemblies(path,
+                        config.Recursive);
+                        
+                    // Add info generated at this directory
+                    assemblyInfoList.AddRange(directoryAssemblyInfoList);
+                }
+                else {
+                    // This is the file case.
+
+                    AssemblyInfo info = new AssemblyInfo {
+                        Name = Path.GetFileName(path),
+                        Path = Path.GetDirectoryName(path),
+                        OutputPath = ""
+                    };
+                            
+                    assemblyInfoList.Add(info);
+                }
+            }
+                            
             return assemblyInfoList;
         }
         
@@ -345,7 +331,7 @@ namespace ManagedCodeGen
         }
         
         // Recursivly search for assemblies from a root path.
-        private static List<AssemblyInfo> RecursivelyIdentifyAssemblies(string rootPath) {
+        private static List<AssemblyInfo> IdentifyAssemblies(string rootPath, bool recursive) {
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
             Stack<string> workList = new Stack<string>();
             string fullRootPath = Path.GetFullPath(rootPath);
@@ -378,11 +364,14 @@ namespace ManagedCodeGen
                 
                     assemblyInfoList.Add(info);
                 }
-            
-                string[] subDirectories = Directory.GetDirectories(current);
-                
-                foreach (var subDir in subDirectories) {
-                    workList.Push(subDir);
+
+                if (recursive) {
+                    // Recurse through sub directories if requested.
+                    string[] subDirectories = Directory.GetDirectories(current);
+                    
+                    foreach (var subDir in subDirectories) {
+                        workList.Push(subDir);
+                    }
                 }
             }
 
@@ -395,6 +384,10 @@ namespace ManagedCodeGen
             private string rootPath = null;
             private string platformPath = null;
             private List<AssemblyInfo> assemblyInfoList;
+            private bool doGCDump = false;
+            private int errorCount = 0;
+            
+            public int ErrorCount { get { return errorCount; }}
 
             public DisasmEngine(string executable, string platformPath, string outputPath, 
                 List<AssemblyInfo> assemblyInfoList)
@@ -410,15 +403,15 @@ namespace ManagedCodeGen
                 // Build a command per assembly to generate the asm output.
                 foreach (var assembly in this.assemblyInfoList)
                 {
-                    string fullpathAssembly = Path.Combine(assembly.Path, assembly.Name);
+                    string fullPathAssembly = Path.Combine(assembly.Path, assembly.Name);
                     
-                    if (!File.Exists(fullpathAssembly)) {
+                    if (!File.Exists(fullPathAssembly)) {
                         // Assembly not found.  Produce a warning and skip this input.
-                        Console.WriteLine("Skipping. Assembly not found: {0}", fullpathAssembly);
+                        Console.WriteLine("Skipping. Assembly not found: {0}", fullPathAssembly);
                         continue;
                     }
                     
-                    List<string> commandArgs = new List<string>() {fullpathAssembly};
+                    List<string> commandArgs = new List<string>() {fullPathAssembly};
                     
                     // Set platform assermbly path if it's defined.
                     if (platformPath != null) {
@@ -432,13 +425,18 @@ namespace ManagedCodeGen
 
                     // Set up environment do disasm.
                     generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
-                    generateCmd.EnvironmentVariable("COMPlus_UnwindDump", "*");
+                    generateCmd.EnvironmentVariable("COMPlus_NgenUnwindDump", "*");
                     generateCmd.EnvironmentVariable("COMPlus_NgenEHDump", "*");
                     generateCmd.EnvironmentVariable("COMPlus_NgenOrder", "1");
-                    generateCmd.EnvironmentVariable("COMPlus_NgenGCDump", "*");
                     generateCmd.EnvironmentVariable("COMPlus_JitDiffableDasm", "1");
                     generateCmd.EnvironmentVariable("COMPlus_ZapSet", "dif");
+                    
+                    if (doGCDump) {
+                        generateCmd.EnvironmentVariable("COMPlus_NgenGCDump", "*");
+                    }
 
+                    CommandResult result;
+                    
                     if (this.rootPath != null) {
                         // Generate path to the output file
                         var assemblyFileName = Path.ChangeExtension(assembly.Name, ".dasm");
@@ -453,7 +451,7 @@ namespace ManagedCodeGen
                                 // Forward output and error to file.
                                 generateCmd.ForwardStdOut(outputStreamWriter);
                                 generateCmd.ForwardStdErr(outputStreamWriter);
-                                generateCmd.Execute();
+                                result = generateCmd.Execute();
                             }
                         }
                     }
@@ -462,7 +460,12 @@ namespace ManagedCodeGen
                         // By default forward to output to stdout/stderr.
                         generateCmd.ForwardStdOut();
                         generateCmd.ForwardStdErr();
-                        generateCmd.Execute();
+                        result = generateCmd.Execute();
+                    }
+                    
+                    if (result.ExitCode != 0) {
+                        Console.WriteLine("Error running {0} on {1}", executablePath, fullPathAssembly);
+                        errorCount++;
                     }
                 }
             }   
