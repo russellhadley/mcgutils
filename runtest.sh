@@ -52,9 +52,9 @@ fi
 
 # Create disasm of mscorlib in base/diff form.
 
-echo Running: $MCGDIFF --corelib --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT
+echo Running: dotnet $MCGDIFF --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll
 
-if ! $MCGDIFF --corelib --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT; then
+if ! dotnet $MCGDIFF --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll; then
     echo "Error! Managed code gen diff failed to generate disasm."
     exit -1
 fi

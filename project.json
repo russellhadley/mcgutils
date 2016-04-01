@@ -5,14 +5,20 @@
     },
 
     "dependencies": {
-        "NETStandard.Library": "1.0.0-rc3-23902",
+        "Microsoft.NETCore.App": {
+          "type": "platform",
+          "version": "1.0.0-rc2-23931"
+        },
         "Microsoft.DotNet.Cli.Utils": "1.0.0-dev-*",
         "System.CommandLine": "0.1.0-*"
     },
 
     "frameworks": {
-        "dnxcore50": {
-            "imports": "portable-net451+win8"
-         }
+        "netstandardapp1.5": {
+            "imports": [
+                "dnxcore50",
+                "portable-net451+win8"
+            ]
+        }
     }
 }
