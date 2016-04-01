@@ -427,9 +427,7 @@ namespace ManagedCodeGen
                     generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
                     generateCmd.EnvironmentVariable("COMPlus_NgenUnwindDump", "*");
                     generateCmd.EnvironmentVariable("COMPlus_NgenEHDump", "*");
-                    generateCmd.EnvironmentVariable("COMPlus_NgenOrder", "1");
                     generateCmd.EnvironmentVariable("COMPlus_JitDiffableDasm", "1");
-                    generateCmd.EnvironmentVariable("COMPlus_ZapSet", "dif");
                     
                     if (doGCDump) {
                         generateCmd.EnvironmentVariable("COMPlus_NgenGCDump", "*");
