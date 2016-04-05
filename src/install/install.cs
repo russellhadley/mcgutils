@@ -68,8 +68,8 @@ namespace ManagedCodeGen
                 string sourcePath = Path.Combine(pathElements);
                 string destinationPath = Path.Combine(config.outputPath, project);
                 
-                Console.WriteLine("Creating install directory {0}", destinationPath);
-                Console.WriteLine("Installing from {0}", sourcePath);
+                Console.WriteLine("Installing {1} to {0}", destinationPath, project);
+                Console.WriteLine("   from {0}", sourcePath);
 
                 // Ensure we have a directory.
                 if (!Directory.Exists(destinationPath)) {
@@ -81,8 +81,8 @@ namespace ManagedCodeGen
                 
                 foreach (FileInfo file in sourceFiles) {
                     string destinationFile = Path.Combine(destinationPath, file.Name);
-                    Console.WriteLine("Installing {0} to {1}", file.Name, 
-                        destinationFile);
+                    //Console.WriteLine("Installing {0} to {1}", file.Name, 
+                    //    destinationFile);
                     
                     try {
                         // Copy file to install location.
