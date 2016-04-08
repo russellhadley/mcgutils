@@ -16,20 +16,6 @@
 //  allowed in the case where a single compiler is passed to avoid any
 //  confusion in the generated results.
 //
-//  usage: mcgdiff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-r]
-//                 [--] <assembly>...
-//
-//      -b, --base <arg>          The base compiler exe.
-//      -d, --diff <arg>          The diff compiler exe.
-//      -o, --output <arg>        The output path.
-//      -p, --platform <arg>      Path to platform assemblies.
-//      -t, --tag <arg>           Name of root in output directory.  Allows
-//                                for many sets of output.
-//      -r, --recursive           Scan directories recursivly.
-//      <assembly>...             The list of assemblies or directories to
-//                                scan for assemblies.
-//
-
 
 using System;
 using System.Diagnostics;
@@ -37,6 +23,7 @@ using System.CommandLine;
 using System.IO;
 using System.Collections.Generic;
 using System.Runtime.Loader;
+using System.Linq;
 using Microsoft.DotNet.Cli.Utils;
 using Microsoft.DotNet.Tools.Common;
 
@@ -333,46 +320,34 @@ namespace ManagedCodeGen
         // Recursivly search for assemblies from a root path.
         private static List<AssemblyInfo> IdentifyAssemblies(string rootPath, bool recursive) {
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
-            Stack<string> workList = new Stack<string>();
             string fullRootPath = Path.GetFullPath(rootPath);
+            SearchOption searchOption = (recursive) ? 
+                SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+
+            // Get files that could be assemblies, but discard currently
+            // ngen'd assemblies.
+            var subFiles = Directory.EnumerateFiles(rootPath, "*", searchOption)
+                .Where(s => (s.EndsWith(".exe") || s.EndsWith(".dll"))
+                    && !s.Contains(".ni."));
             
-            // Enqueue the base case
-            workList.Push(fullRootPath);
-            
-            while (workList.Count != 0)
+            foreach (var filePath in subFiles)
             {
-                string current = workList.Pop();
-                string[] subFiles = Directory.GetFiles(current);
-            
-                foreach (var filePath in subFiles)
-                {
-                    // skip if not an assembly
-                    if (!IsAssembly(filePath)) {
-                        continue;
-                    }
+                // skip if not an assembly
+                if (!IsAssembly(filePath)) {
+                    continue;
+                }
 
-                    string fileName = Path.GetFileName(filePath);
-                    string directoryName = Path.GetDirectoryName(filePath);
-                    string outputPath = directoryName.Substring(fullRootPath.Length).TrimStart(Path.DirectorySeparatorChar);
-                    //Console.WriteLine("Subpath is {0}", outputPath);
+                string fileName = Path.GetFileName(filePath);
+                string directoryName = Path.GetDirectoryName(filePath);
+                string outputPath = directoryName.Substring(fullRootPath.Length).TrimStart(Path.DirectorySeparatorChar);
 
-                    AssemblyInfo info = new AssemblyInfo {
-                        Name = fileName,
-                        Path = directoryName,
-                        OutputPath = outputPath
-                    };
+                AssemblyInfo info = new AssemblyInfo {
+                    Name = fileName,
+                    Path = directoryName,
+                    OutputPath = outputPath
+                };
                 
-                    assemblyInfoList.Add(info);
-                }
-
-                if (recursive) {
-                    // Recurse through sub directories if requested.
-                    string[] subDirectories = Directory.GetDirectories(current);
-                    
-                    foreach (var subDir in subDirectories) {
-                        workList.Push(subDir);
-                    }
-                }
+                assemblyInfoList.Add(info);
             }
 
             return assemblyInfoList;
