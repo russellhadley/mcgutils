@@ -345,7 +345,7 @@ namespace ManagedCodeGen
                 string[] subFiles = Directory.GetFiles(current);
             
                 foreach (var filePath in subFiles)
-                {   
+                {
                     // skip if not an assembly
                     if (!IsAssembly(filePath)) {
                         continue;
