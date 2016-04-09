@@ -42,7 +42,9 @@ namespace ManagedCodeGen
         private bool wait = false;
         private bool recursive = false;
         private IReadOnlyList<string> methods = Array.Empty<string>();
-        private string platformPath = null;
+        private IReadOnlyList<string> platformPaths = Array.Empty<string>();
+        private bool dumpGCInfo = false;
+        private bool verbose = false;
         
         public Config(string[] args) {
 
@@ -53,12 +55,13 @@ namespace ManagedCodeGen
                 syntax.DefineOption("o|output", ref rootPath, "The output path.");
                 syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
                 syntax.DefineOption("f|file", ref fileName, "Name of file to take list of assemblies from. Both a file and assembly list can be used.");
-                
+                syntax.DefineOption("gcinfo", ref dumpGCInfo, "Add GC info to the disasm output.");
+                syntax.DefineOption("v|verbose", ref verbose, "Enable verbose output.");
                 var waitArg = syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
                 waitArg.IsHidden = true;
                 
                 syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursively.");
-                syntax.DefineOption("p|platform", ref platformPath, "Path to platform assemblies");
+                syntax.DefineOptionList("p|platform", ref platformPaths, "Path to platform assemblies");
                 var methodsArg = syntax.DefineOptionList("m|methods", ref methods, 
                     "List of methods to disasm.");
                 methodsArg.IsHidden = true;
@@ -135,10 +138,12 @@ namespace ManagedCodeGen
         public bool HasTag { get { return (tag != null); }}
         public bool Recursive { get { return recursive; }}
         public bool UseFileName { get { return (fileName != null); }}
+        public bool DumpGCInfo { get { return dumpGCInfo; }}
+        public bool DoVerboseOutput { get { return verbose; }}
         public string BaseExecutable { get { return baseExe; }}
         public string DiffExecutable { get { return diffExe; }}
         public string RootPath { get { return rootPath; }}
-        public string PlatformPath { get {return platformPath; }}
+        public IReadOnlyList<string> PlatformPaths { get {return platformPaths; }}
         public string Tag { get { return tag; }}
         public string FileName { get { return fileName; }}
         public IReadOnlyList<string> AssemblyList { get { return assemblyList; }}
@@ -154,7 +159,7 @@ namespace ManagedCodeGen
     }
 
     public class mcgdiff
-    {   
+    {
         public static int Main(string[] args)
         {
             // Error count will be returned.  Start at 0 - this will be incremented
@@ -187,7 +192,7 @@ namespace ManagedCodeGen
                     taggedPath = Path.Combine(config.RootPath, tag);
                 }
                 
-                DisasmEngine baseDisasm = new DisasmEngine(config.BaseExecutable, config.PlatformPath, taggedPath, assemblyWorkList);
+                DisasmEngine baseDisasm = new DisasmEngine(config.BaseExecutable, config, taggedPath, assemblyWorkList);
                 baseDisasm.GenerateAsm();
 
                 if (baseDisasm.ErrorCount > 0) {
@@ -207,7 +212,7 @@ namespace ManagedCodeGen
                     taggedPath = Path.Combine(config.RootPath, tag);
                 }
                 
-                DisasmEngine diffDisasm = new DisasmEngine(config.DiffExecutable, config.PlatformPath, taggedPath, assemblyWorkList);
+                DisasmEngine diffDisasm = new DisasmEngine(config.DiffExecutable, config, taggedPath, assemblyWorkList);
                 diffDisasm.GenerateAsm();
                 
                 if (diffDisasm.ErrorCount > 0) {
@@ -227,6 +232,7 @@ namespace ManagedCodeGen
        
         public static List<AssemblyInfo> GenerateAssemblyWorklist(Config config)
         {
+            bool verbose = config.DoVerboseOutput;
             List<string> assemblyList = new List<string>(); 
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
 
@@ -264,11 +270,16 @@ namespace ManagedCodeGen
                 FileAttributes attr = File.GetAttributes(path);
             
                 if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
-                        
+                    
+                    if (verbose)
+                    {
+                        Console.WriteLine("Processing directory: {0}", path);   
+                    }
+                     
                     // For the directory case create a stack and recursively find any
                     // assemblies for compilation.
                     List<AssemblyInfo> directoryAssemblyInfoList = IdentifyAssemblies(path,
-                        config.Recursive);
+                        config);
                         
                     // Add info generated at this directory
                     assemblyInfoList.AddRange(directoryAssemblyInfoList);
@@ -318,10 +329,10 @@ namespace ManagedCodeGen
         }
         
         // Recursivly search for assemblies from a root path.
-        private static List<AssemblyInfo> IdentifyAssemblies(string rootPath, bool recursive) {
+        private static List<AssemblyInfo> IdentifyAssemblies(string rootPath, Config config) {
             List<AssemblyInfo> assemblyInfoList = new List<AssemblyInfo>();
             string fullRootPath = Path.GetFullPath(rootPath);
-            SearchOption searchOption = (recursive) ? 
+            SearchOption searchOption = (config.Recursive) ? 
                 SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
 
             // Get files that could be assemblies, but discard currently
@@ -332,6 +343,10 @@ namespace ManagedCodeGen
             
             foreach (var filePath in subFiles)
             {
+                if (config.DoVerboseOutput) {
+                    Console.WriteLine("Scaning: {0}", filePath);    
+                }
+                
                 // skip if not an assembly
                 if (!IsAssembly(filePath)) {
                     continue;
@@ -339,7 +354,8 @@ namespace ManagedCodeGen
 
                 string fileName = Path.GetFileName(filePath);
                 string directoryName = Path.GetDirectoryName(filePath);
-                string outputPath = directoryName.Substring(fullRootPath.Length).TrimStart(Path.DirectorySeparatorChar);
+                string fullDirectoryName = Path.GetFullPath(directoryName);
+                string outputPath = fullDirectoryName.Substring(fullRootPath.Length).TrimStart(Path.DirectorySeparatorChar);
 
                 AssemblyInfo info = new AssemblyInfo {
                     Name = fileName,
@@ -356,21 +372,27 @@ namespace ManagedCodeGen
         class DisasmEngine
         {   
             private string executablePath;
+            private Config config;
             private string rootPath = null;
-            private string platformPath = null;
+            private IReadOnlyList<string> platformPaths;
             private List<AssemblyInfo> assemblyInfoList;
-            private bool doGCDump = false;
+            public bool doGCDump = false;
+            public bool verbose = false;
             private int errorCount = 0;
             
             public int ErrorCount { get { return errorCount; }}
 
-            public DisasmEngine(string executable, string platformPath, string outputPath, 
+            public DisasmEngine(string executable, Config config, string outputPath, 
                 List<AssemblyInfo> assemblyInfoList)
             {
+                this.config = config;
                 this.executablePath = executable;
                 this.rootPath = outputPath;
-                this.platformPath = platformPath;
+                this.platformPaths = config.PlatformPaths;
                 this.assemblyInfoList = assemblyInfoList;
+                
+                this.doGCDump = config.DumpGCInfo;
+                this.verbose = config.DoVerboseOutput;
             }
 
             public void GenerateAsm()
@@ -389,9 +411,9 @@ namespace ManagedCodeGen
                     List<string> commandArgs = new List<string>() {fullPathAssembly};
                     
                     // Set platform assermbly path if it's defined.
-                    if (platformPath != null) {
+                    if (platformPaths != null) {
                         commandArgs.Insert(0, "/Platform_Assemblies_Paths");
-                        commandArgs.Insert(1, platformPath);
+                        commandArgs.Insert(1, String.Join(" ", platformPaths));
                     }
 
                     Command generateCmd = Command.Create(
@@ -404,8 +426,12 @@ namespace ManagedCodeGen
                     generateCmd.EnvironmentVariable("COMPlus_NgenEHDump", "*");
                     generateCmd.EnvironmentVariable("COMPlus_JitDiffableDasm", "1");
                     
-                    if (doGCDump) {
+                    if (this.doGCDump) {
                         generateCmd.EnvironmentVariable("COMPlus_NgenGCDump", "*");
+                    }
+
+                    if (this.verbose) {
+                        Console.WriteLine("Running: {0} {1}", executablePath, String.Join(" ", commandArgs));
                     }
 
                     CommandResult result;
