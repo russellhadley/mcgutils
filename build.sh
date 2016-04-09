@@ -15,7 +15,6 @@ function usage
     echo "    -h              : Show this message"
     echo "    -p              : Publish."
     echo ""
-
 }
 
 # defaults

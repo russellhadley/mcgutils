@@ -18,8 +18,8 @@ function usage
     echo "install.sh [-f] [-h] [-b <BUILD TYPE>]"
     echo ""
     echo "    -b <BUILD TYPE> : Build type."
-    echo "    -h              : Show this message"
     echo "    -f              : Force install (overwrite)."
+    echo "    -h              : Show this message"
     echo ""
 
 }
