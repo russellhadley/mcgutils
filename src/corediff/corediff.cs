@@ -87,22 +87,18 @@ namespace ManagedCodeGen
         
         private static string[] frameworkAssemblies = 
         {
-            "mscorlib.dll",		
-            "System.dll",		
-            "System.Core.dll",		
+            "mscorlib.dll",			
             "System.Runtime.dll",		
             "System.Runtime.Extensions.dll",		
             "System.Runtime.Handles.dll",		
             "System.Runtime.InteropServices.dll",		
             "System.Runtime.InteropServices.PInvoke.dll",		
             "System.Runtime.InteropServices.RuntimeInformation.dll",
-            "System.Runtime.Numerics.dll",		
-            "System.Runtime.Serialization.Primitives.dll",		
+            "System.Runtime.Numerics.dll",			
             "Microsoft.CodeAnalysis.dll",		
             "Microsoft.CodeAnalysis.CSharp.dll",		
             "System.Collections.dll",		
             "System.Collections.Immutable.dll",		
-            "System.Collections.ni.dll",		
             "System.Collections.NonGeneric.dll",		
             "System.Collections.Specialized.dll",		
             "System.ComponentModel.dll",		
@@ -111,12 +107,9 @@ namespace ManagedCodeGen
             "System.Text.Encoding.dll",		
             "System.Text.Encoding.Extensions.dll",		
             "System.Text.RegularExpressions.dll",		
-            "System.Xml.dll",		
-            "System.Xml.Linq.dll",		
             "System.Xml.ReaderWriter.dll",		
             "System.Xml.XDocument.dll",		
-            "System.Xml.XmlDocument.dll",		
-            "System.Xml.XmlSerializer.dll" 
+            "System.Xml.XmlDocument.dll"
         };
         
         public static int Main(string[] args)
@@ -185,7 +178,8 @@ namespace ManagedCodeGen
                     
                     commandArgs.Add(fullPathAssembly);
                 }
-                
+
+                if (config.TestRoot != null) {
                 foreach (var dir in testDirectories) {
                     string testRoot = config.TestRoot;
                     string fullPathDir = Path.Combine(testRoot, dir);
@@ -197,6 +191,7 @@ namespace ManagedCodeGen
                     
                     commandArgs.Add(fullPathDir);
                 } 
+                }
             }
             
             Console.WriteLine("Diff command: {0} {1}", asmTool, String.Join(" ", commandArgs));
