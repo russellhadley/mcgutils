@@ -66,7 +66,7 @@ if /i %fx%=="true" (
 )
 
 ::Done
-exit 0
+exit /b 0
 
 :usage
     echo.
@@ -77,4 +77,4 @@ exit 0
     echo      -h                : Show this message
     echo      -p                : Publish utilites.
     echo. 
-    exit -1
+    exit /b -1
