@@ -3,6 +3,10 @@ This repo holds a collection of utilites used by the Managed CodeGen team
 to automate tasks when working on CoreCLR.  Initial utilies are around 
 producing diffs of codegen changes.
 
+TL;DR Run build.\{cmd|sh\} -f -p to create a bin directory in the root of the repo.  Add bin/mcgdiff and bin/corediff to your path and you can call them to generate *.dasm files.
+
+For a more complete introduction look at the [getting started guide](doc/gettingstarted.md).
+
 ## mcgdiff
 This is a general tool to produce diffs for compiled MSIL assemblies.  The 
 tool relies on producing a base and diff crossgen.exe, either by using a
@@ -12,10 +16,10 @@ building both a base and diff locally.
 Sample help commandline:
 ```
     [D:\glue\mcgdiff]
-    16:30:04 > dotnet run -p .\src\mcgdiff -- --help
+    16:30:04 > mcgdiff --help
 
     usage: mcgdiff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-f <arg>]
-                [-r] [-p <arg>] [--] <assembly>...
+                   [-r] [-p <arg>] [--] <assembly>...
         -b, --base <arg>        The base compiler exe.
         -d, --diff <arg>        The diff compiler exe.
         -o, --output <arg>      The output path.
@@ -40,7 +44,7 @@ could be created.
 Sample help commandline:
 ```
     [D:\glue\mcgdiff]
-    16:32:10 > dotnet run -p .\src\corediff -- --help
+    16:32:10 > corediff --help
 
     usage: corediff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>]
                     [--core_root <arg>] [--test_root <arg>]
@@ -53,31 +57,6 @@ Sample help commandline:
         --test_root <arg>     Path to test tree
 ```
 
-## install
-A simple cross platform C# installer for other tools in the repo.  Assumes a 
-complete build and publish of other tools. This installer creates a layout of
-stand alone binaries in a target directory each sub directory of which can be
-added to the path to allow it to be invoked independently.
-
-Sample help commandline:
-```
-    D:\glue\mcgdiff]
-    16:35:28 > dotnet run -p .\src\install -- --help
-
-    usage: install [-b <arg>] [-p <arg>] [-i <arg>] [-f]
-        -b, --build <arg>       Build type. May be Debug or Release.
-        -p, --platform <arg>    The platform to install.
-        -i, --install <arg>     The install path.
-        -f, --force             Overwrite pre-existing files.
-```
-
-Sample install commandline:
-```
-    [D:\glue\mcgdiff]
-    16:38:06 > dotnet run -p .\src\install -- --build Debug --platform win10-x64 -i D:\glue\install
-
-    Installing corediff to D:\glue\install\corediff
-        from D:\glue\mcgdiff\src\corediff\bin\Debug\netcoreapp1.0\win10-x64\publish
-    Installing mcgdiff to D:\glue\install\mcgdiff
-        from D:\glue\mcgdiff\src\mcgdiff\bin\Debug\netcoreapp1.0\win10-x64\publish
-```
+## packages
+This is a skeleton project that exists to pull down a predicitable set of framework assemblies and publish them in the root in the subdirectory './fx'.  Today this is set to the RC2 version of the NetCoreApp1.0 frameworks.  When this package is installed via the build.\{cmd|sh\} script this  set can be used on any supported platform for diffing.  Note: The RC2 mscorlib.dll is removed, this assembly should be updated from the selected base runtime that is under test for consistency.
+To add particular packages to the set you diff, add their dependencies to the project.json in this project and they will be pulled in and published in the standalone directory './fx'.

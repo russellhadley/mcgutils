@@ -4,6 +4,7 @@
 # ignore default binary/obj locations
 **/bin
 **/obj
+/fx
 
 # project system lock files
 project.lock.json
