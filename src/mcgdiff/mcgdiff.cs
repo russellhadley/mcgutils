@@ -211,7 +211,7 @@ namespace ManagedCodeGen
                     
                     taggedPath = Path.Combine(config.RootPath, tag);
                 }
-                
+    
                 DisasmEngine diffDisasm = new DisasmEngine(config.DiffExecutable, config, taggedPath, assemblyWorkList);
                 diffDisasm.GenerateAsm();
                 
@@ -267,7 +267,15 @@ namespace ManagedCodeGen
             // Process worklist and produce the info needed for the disasm engines.
             foreach (var path in assemblyList)
             {
-                FileAttributes attr = File.GetAttributes(path);
+                FileAttributes attr;
+                
+                if (File.Exists(path)) {
+                    attr = File.GetAttributes(path);
+                }
+                else {
+                    Console.WriteLine("Can't find assembly {0}", path);
+                    continue;
+                }
             
                 if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
                     
@@ -411,7 +419,7 @@ namespace ManagedCodeGen
                     List<string> commandArgs = new List<string>() {fullPathAssembly};
                     
                     // Set platform assermbly path if it's defined.
-                    if (platformPaths != null) {
+                    if (platformPaths.Count > 0) {
                         commandArgs.Insert(0, "/Platform_Assemblies_Paths");
                         commandArgs.Insert(1, String.Join(" ", platformPaths));
                     }
@@ -435,7 +443,7 @@ namespace ManagedCodeGen
                     }
 
                     CommandResult result;
-                    
+
                     if (this.rootPath != null) {
                         // Generate path to the output file
                         var assemblyFileName = Path.ChangeExtension(assembly.Name, ".dasm");
