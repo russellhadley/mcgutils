@@ -66,7 +66,7 @@ if /i %fx%=="true" (
 )
 
 ::Done
-exit /b 0
+goto :EOF
 
 :usage
     echo.
