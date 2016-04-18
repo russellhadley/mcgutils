@@ -402,6 +402,7 @@ namespace ManagedCodeGen
             // run get diff command to see if we have textual diffs.
             // (use git diff since it's already a dependency and cross platform)
             List<string> commandArgs = new List<string>();
+            commandArgs.Add("diff");
             commandArgs.Add("--exit-code");
             commandArgs.Add("--name-only");
             commandArgs.Add(diffPath);
