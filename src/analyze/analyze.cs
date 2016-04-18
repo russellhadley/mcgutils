@@ -272,7 +272,7 @@ namespace ManagedCodeGen
                 }
             }
             
-            Console.WriteLine("\n{0} total files with diffs.", sortedFileCount);
+            Console.WriteLine("\n{0} total files with size differences.", sortedFileCount);
           
             var sortedMethodDelta = fileDeltaList
                                         .SelectMany(fd => fd.methodDeltaList, (fd, md) => new {
@@ -305,7 +305,7 @@ namespace ManagedCodeGen
                 }
             }
             
-            Console.WriteLine("\n{0} total methods with diffs", sortedMethodCount);
+            Console.WriteLine("\n{0} total methods with size differences.", sortedMethodCount);
             
             return totalBytes;
         }
@@ -394,11 +394,37 @@ namespace ManagedCodeGen
                 }
             }  
         }
+        
+        public static bool DiffInText(string diffPath, string basePath) {
+                        // Run system diff command to see if we have textual diffs.
+            List<string> commandArgs = new List<string>();
+            commandArgs.Add("-q");
+            commandArgs.Add(diffPath);
+            commandArgs.Add(basePath);
+            Command diffCmd = Command.Create(@"diff", commandArgs);
+            
+            //diffCmd.ForwardStdOut(inputStream);
+            //diffCmd.ForwardStdErr(inputStream);
+            
+            CommandResult result = diffCmd.Execute();
+            
+            if (result.ExitCode != 0) {
+                return true;
+            }
+            
+            return false;
+        }
  
         public static int Main(string[] args)
         {
             // Parse incoming arguments
             Config config = new Config(args);
+            
+            // Early out if no textual diffs found.
+            if (!DiffInText(config.DiffPath, config.BasePath)) {
+                Console.WriteLine("No diffs found.");
+                return 0;
+            }
             
             // Extract method info from base and diff directory or file.
             var baseList = ExtractFileInfo(config.BasePath, config.Recursive);

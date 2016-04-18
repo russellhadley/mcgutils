@@ -16,7 +16,7 @@ To build/setup:
   differences.
   
 The output of analyze looks like the following:
-
+```
 $ analyze --base ~/Work/output/base --diff ~/Work/output/diff
 
 (Note: Lower is better)
@@ -55,3 +55,4 @@ Top method improvements by size (bytes):
     -85 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.LanguageParser:ParseForStatement():ref:this
 
 3762 total methods with diffs
+```
