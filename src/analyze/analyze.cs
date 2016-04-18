@@ -32,7 +32,6 @@ namespace ManagedCodeGen
                     syntax.DefineOption("b|base", ref basePath, "Base file or directory.");
                     syntax.DefineOption("d|diff", ref diffPath, "Diff file or directory.");
                     syntax.DefineOption("r|recursive", ref recursive, "Search directories recursively.");
-                    syntax.DefineOption("f|full", ref full, "Output full analysis to stdout (rather than a summary).");
                     syntax.DefineOption("c|count", ref count, "Count of files and methods (at most) to output in the symmary."
                                                               + " (count) improvements and (count) regressions of each will be included."
                                                               + " (default 5)");
@@ -47,7 +46,13 @@ namespace ManagedCodeGen
             }
             
             void validate() {
+                if (basePath == null) {
+                    syntaxResult.ReportError("Base path (--base) is required.");
+                }
                 
+                if (diffPath == null) {
+                    syntaxResult.ReportError("Diff path (--diff) is required.");
+                }
             }
             
             public string BasePath { get { return basePath; } }
@@ -236,7 +241,7 @@ namespace ManagedCodeGen
         //
         public static int Summarize(IEnumerable<FileDelta> fileDeltaList, int requestedCount) {
             var totalBytes = fileDeltaList.Sum(x => x.deltaBytes);
-            Console.WriteLine("\n(Note: Lower is better)\n");
+            Console.WriteLine("\nSummary:\n(Note: Lower is better)\n");
             Console.WriteLine("Total bytes of diff: {0}", totalBytes.ToString());
             if (totalBytes != 0) {
                 Console.WriteLine("    diff is {0}", totalBytes < 0 ? "an improvement." : "a regression."); 
@@ -259,10 +264,10 @@ namespace ManagedCodeGen
                     Console.WriteLine("    {1} : {0}", fileDelta.path, fileDelta.deltaBytes);
                 }
             }
-            
-            // index of the element count from the end.
-            int fileDeltaIndex = (sortedFileDelta.Count() - fileCount);
-            if (sortedFileDelta[fileDeltaIndex].deltaBytes < 0) {
+
+            if (sortedFileDelta.Last().deltaBytes < 0) {
+                // index of the element count from the end.
+                int fileDeltaIndex = (sortedFileDelta.Count() - fileCount);
                 Console.WriteLine("\nTop file improvements by size (bytes):");
 
                 foreach (var fileDelta in sortedFileDelta.GetRange(fileDeltaIndex, fileCount)
@@ -291,11 +296,10 @@ namespace ManagedCodeGen
                     Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.deltaBytes);
                 }
             }
-            
-            
-            // index of the element count from the end.
-            int methodDeltaIndex = (sortedMethodCount - methodCount);
-            if (sortedMethodDelta[methodDeltaIndex].deltaBytes < 0) {
+
+            if (sortedMethodDelta.Last().deltaBytes < 0) {
+                 // index of the element count from the end.
+                int methodDeltaIndex = (sortedMethodCount - methodCount);
                 Console.WriteLine("\nTop method improvements by size (bytes):");
 
                 foreach (var method in sortedMethodDelta.GetRange(methodDeltaIndex, methodCount)
@@ -307,7 +311,7 @@ namespace ManagedCodeGen
             
             Console.WriteLine("\n{0} total methods with size differences.", sortedMethodCount);
             
-            return totalBytes;
+            return Math.Abs(totalBytes);
         }
  
         public static void WarnFiles(IEnumerable<FileInfo> diffList, IEnumerable<FileInfo> baseList) {
@@ -320,22 +324,20 @@ namespace ManagedCodeGen
             var onlyInBaseCount = onlyInBaseList.Count();
             if (onlyInBaseCount > 0) {
                 Console.WriteLine("Warning: {0} files in base but not in diff.", onlyInBaseCount);
+                Console.WriteLine("\nOnly in base files:");
+                foreach(var file in onlyInBaseList) {
+                    Console.WriteLine(file.path);
+                }
             }
             
             var onlyInDiffCount = onlyInDiffList.Count();
             if (onlyInDiffCount > 0) {
                 Console.WriteLine("Warning: {0} files in diff but not in base.", onlyInDiffCount);
-            }
-            
-            Console.WriteLine("\nOnly in base files:");
-            foreach(var file in onlyInBaseList) {
-                Console.WriteLine(file.path);
-            }
-            
-            Console.WriteLine("\nOnly in diff files:");
-            foreach(var file in onlyInBaseList) {
-                Console.WriteLine(file.path);
-            }
+                Console.WriteLine("\nOnly in diff files:");
+                foreach(var file in onlyInDiffList) {
+                    Console.WriteLine(file.path);
+                }
+            } 
         }
         
         public static void WarnMethods(IEnumerable<FileDelta> compareList) {
@@ -369,9 +371,10 @@ namespace ManagedCodeGen
                             // Early out if there are no diff bytes.
                             continue;
                         }
-                        
+                        Console.WriteLine("NYI - JSON serialization is causing an exception.");
+                        break;
                         // Serialize file delta to output file.
-                        outputStreamWriter.Write(JsonConvert.SerializeObject(file));
+                        //outputStreamWriter.Write(JsonConvert.SerializeObject(file));
                     }
                 }
             }  
@@ -441,7 +444,7 @@ namespace ManagedCodeGen
 
             var compareList = Comparator(baseList, diffList);
             
-            // Generate warning list if requested.
+            // Generate warning lists if requested.
             if (config.Warn) {
                 WarnFiles(diffList, baseList);
                 WarnMethods(compareList);
