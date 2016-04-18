@@ -49,7 +49,7 @@ while getopts "hpfb:" opt; do
 done
 
 # declare the array of projects   
-declare -a projects=(mcgdiff corediff)
+declare -a projects=(mcgdiff corediff analyze)
 
 # for each project either build or publish
 for proj in "${projects[@]}"
