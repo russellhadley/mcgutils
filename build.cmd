@@ -49,7 +49,7 @@ if %publish% == "true" (
 
 ::Build each project - list any new projects here - this is a kludge but
 ::cmd has it's challenges.
-for %%p in (corediff mcgdiff) do (
+for %%p in (corediff mcgdiff analyze) do (
     if /i %publish%=="true" (
         dotnet publish -c %buildType% -o %appInstallDir%\%%p .\src\%%p
     ) else (
