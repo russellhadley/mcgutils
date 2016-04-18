@@ -396,22 +396,26 @@ namespace ManagedCodeGen
         }
         
         public static bool DiffInText(string diffPath, string basePath) {
-                        // Run system diff command to see if we have textual diffs.
+            // run get diff command to see if we have textual diffs.
+            // (use git diff since it's already a dependency and cross platform)
             List<string> commandArgs = new List<string>();
-            commandArgs.Add("-q");
+            commandArgs.Add("--exit-code");
+            commandArgs.Add("--name-only");
             commandArgs.Add(diffPath);
             commandArgs.Add(basePath);
-            Command diffCmd = Command.Create(@"diff", commandArgs);
-            
-            //diffCmd.ForwardStdOut(inputStream);
-            //diffCmd.ForwardStdErr(inputStream);
+            Command diffCmd = Command.Create(@"git", commandArgs);
+            diffCmd.CaptureStdOut();
+            diffCmd.CaptureStdErr();
             
             CommandResult result = diffCmd.Execute();
             
             if (result.ExitCode != 0) {
+                // TODO - there's some issue with capturing stdout.  Just leave this commented out for now.
+                // Console.WriteLine("here {0}", result.StdOut);
+                // var lines = result.StdOut.Split(new [] {Environment.NewLine}, StringSplitOptions.None).ToList();
+                Console.WriteLine("Found files with textual diffs.");
                 return true;
             }
-            
             return false;
         }
  
