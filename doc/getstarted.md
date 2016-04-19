@@ -2,24 +2,59 @@
 
 ## Assumptions
 
-This guide assumes that you have built a CoreCLR and have produced a crossgen executable and mscorlib assembly.  See the [CoreCLR](https://github.com/dotnet/coreclr) GitHub repo for directions on building.
+This guide assumes that you have built a CoreCLR and have produced a crossgen 
+executable and mscorlib assembly. See the [CoreCLR](https://github.com/dotnet/coreclr) 
+GitHub repo for directions on building.
+
+## Dependencies
+
+* dotnet cli - All the utilites in the repo rely on dotnet cli for packages and building.  
+  This tool needs to be on the path.  (Note: this should a version after the pre-V1 RC1 
+  build since that does not include all the features needed.)
+* git - The analyze tool uses git diff to check for textual differences since this it's 
+  consistent across platforms and fast. 
+
 
 ## Build
-Build mcgutils using the build script in the root of the repo - (build.\{cmd,sh\}). By default the script just builds the tools and does not publish them in a seperate directory.  To install the utilities add the '-p'flag which publishes each utility as a standalone app in a directory under ./bin in the root of the repo.  Additionally to publish the default set of frameworks that can be used for diff'ing cross-platform add '-f'.
 
-Add usage here...
+Build mcgutils using the build script in the root of the repo - (build.\{cmd,sh\}). By 
+default the script just builds the tools and does not publish them in a seperate directory. 
+To install the utilities add the '-p'flag which publishes each utility as a standalone app 
+in a directory under ./bin in the root of the repo.  Additionally to publish the default set 
+of frameworks that can be used for diff'ing cross-platform add '-f'.
+
+```
+ $ ./build.sh -h
+
+build.sh [-p] [-h] [-b <BUILD TYPE>]
+
+    -b <BUILD TYPE> : Build type.
+    -h              : Show this message
+    -p              : Publish apps.
+    -f              : Install scratch framework directory in <script_root>/fx.
+```
 
 ## Producing a baseline for CoreCLR
 
-Today there are two scenarios within CoreCLR depending on platform.  This is largly a function of building the tests and windows is further ahead here.  Today you have to consume the results of a Windows test build on Linux and OSX to run tests and the set up can be involved.  (See CoreCLR repo unix test instructions [here](https://github.com/dotnet/coreclr/blob/master/Documentation/building/unix-test-instructions.md)) This leads to the following two scenarios.
+Today there are two scenarios within CoreCLR depending on platform.  This is largly a function 
+of building the tests and windows is further ahead here.  Today you have to consume the results 
+of a Windows test build on Linux and OSX to run tests and the set up can be involved.  (See 
+CoreCLR repo unix test instructions 
+[here](https://github.com/dotnet/coreclr/blob/master/Documentation/building/unix-test-instructions.md)) 
+This leads to the following two scenarios.
 
 ### Scenario 1 - Running the mscorlib and frameworks diffs using just the assemblies made available by mcgutils.
 
-Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
+Running the build script as mentioned above with '-f' produces a standalone './fx' directory in 
+the root of the repo.  This can be used as inputs to the diff tool and gives the developer a 
+simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
 
 Steps:
-*  Ensure corediff and mcgdiff are on the path.
-*  Invoke command
+* Build a baseline CoreCLR by following build directions in coreclr repo 
+  [build doc directory](https://github.com/dotnet/coreclr/tree/master/Documentation/building).
+* Ensure corediff and mcgdiff are on the path.
+* Create an empty output directory.
+* Invoke command
 ``` 
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
 ```
@@ -27,14 +62,21 @@ Steps:
 ```
 > ls <output_directory>/base/*
 ```
-The output directory will contain a list of *.dasm files produced by the code generator.  These are ultimatly what are diff'ed.
+The output directory will contain a list of *.dasm files produced by the code generator. These 
+are ultimatly what are diff'ed.
 
 ### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
 
-In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform.  This will create a "core_root" directory in the built test assets that has all the platform frameworks as well as test dependencies.  This should be used as the 'core_root' for the test run in addition to providing the test assemblies.
+In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform. This 
+will create a "core_root" directory in the built test assets that has all the platform frameworks 
+as well as test dependencies.  This should be used as the 'core_root' for the test run in addition 
+to providing the test assemblies.
 
 Steps:
+* Build a baseline CoreCLR by following build directions in coreclr repo 
+  [build doc directory](https://github.com/dotnet/coreclr/tree/master/Documentation/building).
 * Ensure corediff and mcgdiff are on the path.
+* Create an empty output directory.
 * Invoke command
 ```
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
@@ -43,25 +85,35 @@ Steps:
 ```
 > ls <output_directory>/base/*
 ```
-The base output directory should contane a tree that mirrors the test tree containing a *.dasm for each assembly it found.
+The base output directory should contane a tree that mirrors the test tree containing a *.dasm for 
+each assembly it found.
 
-This scenario will take a fair bit longer than the first since it traverses and identifies test assembles in addition to the mscorlib/frameworks *.asm.
+This scenario will take a fair bit longer than the first since it traverses and identifies test 
+assembles in addition to the mscorlib/frameworks *.asm.
 
 ## Producing diff output for CoreCLR
 
-In simple terms you just run the base directions but instead of passing '--base' you pass '--diff' and use a path to a different CoreCLR crossgen.
+In simple terms you just run the base directions but instead of passing '--base' you pass '--diff' 
+and use a path to a different CoreCLR crossgen.
 
-This diff system is built on crossgen so producing a new crossgen with a new code generator - either through modifying your base CoreCLR repo, adding a second repo with changes, or pulling from build lab resource - and running it with '--diff' will produce a parallel 'diff' tree in the output with diffable *.dasm.
+This diff system is built on crossgen so producing a new crossgen with a new code generator - either 
+through modifying your base CoreCLR repo, adding a second repo with changes, or pulling from build 
+lab resource - and running it with '--diff' will produce a parallel 'diff' tree in the output with 
+diffable *.dasm.
 
 Below are the two scenarios listed above with modifications for producing a 'diff' tree.
 
 ### Scenario 1 - Running the mscorlib and frameworks diffs using just the assemblies made available by mcgutils.
 
-Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
+Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root 
+of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) 
+a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
 
 Steps:
-*  Ensure corediff and mcgdiff are on the path.
-*  Invoke command
+* Build a new crossgen - either in a new repo or new branch in the current repo.
+* Ensure corediff and mcgdiff are on the path.
+* Reuse same output directory from above.
+* Invoke command
 ``` 
 > corediff --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
 ```
@@ -69,14 +121,20 @@ Steps:
 ```
 > ls <output_directory>/diff/*
 ```
-The diff output directory will contain a list of *.dasm files produced by the code generator.  These are ultimatly what are diff'ed.
+The diff output directory will contain a list of *.dasm files produced by the code generator. These are 
+ultimatly what are diff'ed.
 
 ### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
 
-In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform.  This will create a "core_root" directory in the built test assets that has all the platform frameworks as well as test dependencies.  This should be used as the 'core_root' for the test run in addition to providing the test assemblies.
+In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform. This will 
+create a "core_root" directory in the built test assets that has all the platform frameworks as well as 
+test dependencies.  This should be used as the 'core_root' for the test run in addition to providing the 
+test assemblies.
 
 Steps:
+* Build a new crossgen - either in a new repo or new branch in the current repo.
 * Ensure corediff and mcgdiff are on the path.
+* Reuse same output directory from above.
 * Invoke command
 ```
 > corediff --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
@@ -88,7 +146,10 @@ ls <output_directory>/diff/*
 
 ## Putting it all together
 
-In the above example we showed how to produce base and diff *.dasm in seperate steps but if a developer has two seperate sets of CoreCLR binaries - produced from two CoreCLR repos, or extracted from the lab - both '--base' and '--diff' arguments to corediff may be specified at the same time.  The tool will run the inputs through both tools (though not in parallel today) and produce the 'base' and 'diff' directories of output.
+In the above example we showed how to produce base and diff *.dasm in seperate steps but if a developer has 
+two seperate sets of CoreCLR binaries - produced from two CoreCLR repos, or extracted from the lab - both 
+'--base' and '--diff' arguments to corediff may be specified at the same time.  The tool will run the inputs 
+through both tools (though not in parallel today) and produce the 'base' and 'diff' directories of output.
 
 ```
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --diff <diff_coreclr_repo> --output <output_directory> --core_root <core_root_directory> [ --test_root <test_root> ]
@@ -98,7 +159,9 @@ Note: that this may be used with either the built 'core_root' or with the mcguti
 
 ### Notes on tags
 
-Corediff allows a user supplied '--tag' on the commandline.  This tag can be used to label different directories of *.dasm with in the output directory so multiple (more than two) runs can be done.  This supports a scenario like the following:
+Corediff allows a user supplied '--tag' on the commandline.  This tag can be used to label different 
+directories of *.dasm with in the output directory so multiple (more than two) runs can be done. 
+This supports a scenario like the following:
 
 * Build base CoreCLR
 * Produce baseline diffs by invoking the tool with '--base'
@@ -143,7 +206,8 @@ usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
 ```
 
 For the simplest case just point the tool at a base and diff dir produce by corediff and it 
-will outline byte diff across the whole diff. On an significant set of diffs it will produce output like the following:
+will outline byte diff across the whole diff. On an significant set of diffs it will produce output 
+like the following:
 
 ```
 $ analyze --base ~/Work/glue/output/base --diff ~/Work/glue/output/diff
