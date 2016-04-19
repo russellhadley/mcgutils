@@ -18,12 +18,12 @@ Today there are two scenarios within CoreCLR depending on platform.  This is lar
 Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
 
 Steps:
-1.  Ensure corediff and mcgdiff are on the path.
-2.  Invoke command
+*  Ensure corediff and mcgdiff are on the path.
+*  Invoke command
 ``` 
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
 ```
-3. Check output directory
+* Check output directory
 ```
 > ls <output_directory>/base/*
 ```
@@ -34,12 +34,12 @@ The output directory will contain a list of *.dasm files produced by the code ge
 In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform.  This will create a "core_root" directory in the built test assets that has all the platform frameworks as well as test dependencies.  This should be used as the 'core_root' for the test run in addition to providing the test assemblies.
 
 Steps:
-1. Ensure corediff and mcgdiff are on the path.
-2. Invoke command
+* Ensure corediff and mcgdiff are on the path.
+* Invoke command
 ```
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
 ```
-3. Check putput directory
+* Check putput directory
 ```
 > ls <output_directory>/base/*
 ```
@@ -60,12 +60,12 @@ Below are the two scenarios listed above with modifications for producing a 'dif
 Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
 
 Steps:
-1.  Ensure corediff and mcgdiff are on the path.
-2.  Invoke command
+*  Ensure corediff and mcgdiff are on the path.
+*  Invoke command
 ``` 
 > corediff --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
 ```
-3. Check output directory
+* Check output directory
 ```
 > ls <output_directory>/diff/*
 ```
