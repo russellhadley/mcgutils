@@ -111,3 +111,82 @@ Corediff allows a user supplied '--tag' on the commandline.  This tag can be use
 * ...
 
 The above scenario should show that there is some flexability in the work flow.
+
+## Analyzing diffs
+
+The mcgutils suite includes the analyze tool to speed up analyzing diffs produced by corediff/mcgdiffs utilities.
+This tool cracks the *.dasm files produced in the earlier steps and extracts the bytes difference between 
+the two.  This data is keyed by file and method name - for instance two files with different names will not 
+diff even if passed as the base and diff since the tool is looking to identify files missing from the base 
+dataset vs the diff dataset.
+
+Here is the help output:
+```
+russellhadley@Hoplite mcgutils (analyze)]$ analyze --help
+usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
+               [--csv <arg>]
+
+    -b, --base <arg>     Base file or directory.
+    -d, --diff <arg>     Diff file or directory.
+    -r, --recursive      Search directories recursively.
+    -c, --count <arg>    Count of files and methods (at most) to output
+                         in the symmary. (count) improvements and
+                         (count) regressions of each will be included.
+                         (default 5)
+    -w, --warn           Generate warning output for files/methods that
+                         only exists in one dataset or the other (only
+                         in base or only in diff).
+    --json <arg>         Dump analysis data to specified file in JSON
+                         format.
+    --csv <arg>          Dump analysis data to specified file in CSV
+                         format.
+```
+
+For the simplest case just point the tool at a base and diff dir produce by corediff and it 
+will outline byte diff across the whole diff. On an significant set of diffs it will produce output like the following:
+
+```
+$ analyze --base ~/Work/glue/output/base --diff ~/Work/glue/output/diff
+Found files with textual diffs.
+
+Summary:
+(Note: Lower is better)
+
+Total bytes of diff: -4124
+    diff is an improvement.
+
+Top file regressions by size (bytes):
+    193 : Microsoft.CodeAnalysis.dasm
+    154 : System.Dynamic.Runtime.dasm
+    60 : System.IO.Compression.dasm
+    43 : System.Net.Security.dasm
+    43 : System.Xml.ReaderWriter.dasm
+
+Top file improvements by size (bytes):
+    -1804 : mscorlib.dasm
+    -1532 : Microsoft.CodeAnalysis.CSharp.dasm
+    -726 : System.Xml.XmlDocument.dasm
+    -284 : System.Linq.Expressions.dasm
+    -239 : System.Net.Http.dasm
+
+21 total files with size differences.
+
+Top method regessions by size (bytes):
+    328 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.DocumentationCommentXmlTokens:.cctor()
+    266 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.MethodTypeInferrer:Fix(int,byref):bool:this
+    194 : mscorlib.dasm - System.DefaultBinder:BindToMethod(int,ref,byref,ref,ref,ref,byref):ref:this
+    187 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.LanguageParser:ParseModifiers(ref):this
+    163 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.Symbols.SourceAssemblySymbol:DecodeWellKnownAttribute(byref,int,bool):this
+
+Top method improvements by size (bytes):
+    -160 : System.Xml.XmlDocument.dasm - System.Xml.XmlTextWriter:AutoComplete(int):this
+    -124 : System.Xml.XmlDocument.dasm - System.Xml.XmlTextWriter:WriteEndStartTag(bool):this
+    -110 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.MemberSemanticModel:GetEnclosingBinder(ref,int):ref:this
+    -95 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.CSharpDataFlowAnalysis:AnalyzeReadWrite():this
+    -85 : Microsoft.CodeAnalysis.CSharp.dasm - Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax.LanguageParser:ParseForStatement():ref:this
+
+3762 total methods with size differences.
+```
+
+If the --cvs `<file_name>` or --json `<file_name>` is passed, all the diff data extracted and analyzed 
+will be written out for futher analysis.
