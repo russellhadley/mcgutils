@@ -63,26 +63,26 @@ this data to produce a summary and/or dump the info to a unified data file (CSC,
 The common usage of the tool is to extract interesting diffs if any from a diff run as
 development progresses.
 ```
-$ analyze --help
-usage: analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
-               [--json <arg>] [--csv <arg>]
+    $ analyze --help
+    usage: analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
+                [--json <arg>] [--csv <arg>]
 
-    -b, --base <arg>     Base file or directory.
-    -d, --diff <arg>     Diff file or directory.
-    -r, --recursive      Search directories recursively.
-    -f, --full           Output full analysis to stdout (rather than a
-                         summary).
-    -c, --count <arg>    Count of files and methods (at most) to output
-                         in the symmary. (count) improvements and
-                         (count) regressions of each will be included.
-                         (default 5)
-    -w, --warn           Generate warning output for files/methods that
-                         only exists in one dataset or the other (only
-                         in base or only in diff).
-    --json <arg>         Dump analysis data to specified file in JSON
-                         format.
-    --csv <arg>          Dump analysis data to specified file in CSV
-                         format.
+        -b, --base <arg>     Base file or directory.
+        -d, --diff <arg>     Diff file or directory.
+        -r, --recursive      Search directories recursively.
+        -f, --full           Output full analysis to stdout (rather than a
+                            summary).
+        -c, --count <arg>    Count of files and methods (at most) to output
+                            in the symmary. (count) improvements and
+                            (count) regressions of each will be included.
+                            (default 5)
+        -w, --warn           Generate warning output for files/methods that
+                            only exists in one dataset or the other (only
+                            in base or only in diff).
+        --json <arg>         Dump analysis data to specified file in JSON
+                            format.
+        --csv <arg>          Dump analysis data to specified file in CSV
+                            format.
 ```
 
 
