@@ -371,10 +371,15 @@ namespace ManagedCodeGen
                             // Early out if there are no diff bytes.
                             continue;
                         }
-                        Console.WriteLine("NYI - JSON serialization is causing an exception.");
-                        break;
-                        // Serialize file delta to output file.
-                        //outputStreamWriter.Write(JsonConvert.SerializeObject(file));
+                                                      
+                        try {
+                            // Serialize file delta to output file.
+                            outputStreamWriter.Write(JsonConvert.SerializeObject(file, Formatting.Indented));
+                        }
+                        catch (Exception e) {
+                            Console.WriteLine("Exception serializing JSON: {0}", e.ToString());
+                            break;
+                        }
                     }
                 }
             }  
