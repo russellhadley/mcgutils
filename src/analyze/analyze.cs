@@ -32,12 +32,15 @@ namespace ManagedCodeGen
                     syntax.DefineOption("b|base", ref basePath, "Base file or directory.");
                     syntax.DefineOption("d|diff", ref diffPath, "Diff file or directory.");
                     syntax.DefineOption("r|recursive", ref recursive, "Search directories recursively.");
-                    syntax.DefineOption("c|count", ref count, "Count of files and methods (at most) to output in the summary."
-                                                              + " (count) improvements and (count) regressions of each will be included."
-                                                              + " (default 5)");
-                    syntax.DefineOption("w|warn", ref warn, "Generate warning output for files/methods that only "
-                                                            + "exists in one dataset or the other (only in base or only in diff).");
-                    syntax.DefineOption("json", ref json, "Dump analysis data to specified file in JSON format.");
+                    syntax.DefineOption("c|count", ref count, 
+                        "Count of files and methods (at most) to output in the summary."
+                      + " (count) improvements and (count) regressions of each will be included."
+                      + " (default 5)");
+                    syntax.DefineOption("w|warn", ref warn, 
+                        "Generate warning output for files/methods that only "
+                      + "exists in one dataset or the other (only in base or only in diff).");
+                    syntax.DefineOption("json", ref json, 
+                        "Dump analysis data to specified file in JSON format.");
                     syntax.DefineOption("csv", ref csv, "Dump analysis data to specified file in CSV format.");
                 });
                 
