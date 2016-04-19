@@ -57,6 +57,35 @@ Sample help commandline:
         --test_root <arg>     Path to test tree
 ```
 
+## analyze
+The analyze tool understand the format of the *.dasm files in a diff and can extract
+this data to produce a summary and/or dump the info to a unified data file (CSC, JSON)
+The common usage of the tool is to extract interesting diffs if any from a diff run as
+development progresses.
+```
+    $ analyze --help
+    usage: analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
+                [--json <arg>] [--csv <arg>]
+
+        -b, --base <arg>     Base file or directory.
+        -d, --diff <arg>     Diff file or directory.
+        -r, --recursive      Search directories recursively.
+        -f, --full           Output full analysis to stdout (rather than a
+                            summary).
+        -c, --count <arg>    Count of files and methods (at most) to output
+                            in the symmary. (count) improvements and
+                            (count) regressions of each will be included.
+                            (default 5)
+        -w, --warn           Generate warning output for files/methods that
+                            only exists in one dataset or the other (only
+                            in base or only in diff).
+        --json <arg>         Dump analysis data to specified file in JSON
+                            format.
+        --csv <arg>          Dump analysis data to specified file in CSV
+                            format.
+```
+
+
 ## packages
 This is a skeleton project that exists to pull down a predicitable set of framework assemblies and publish them in the root in the subdirectory './fx'.  Today this is set to the RC2 version of the NetCoreApp1.0 frameworks.  When this package is installed via the build.\{cmd|sh\} script this  set can be used on any supported platform for diffing.  Note: The RC2 mscorlib.dll is removed, this assembly should be updated from the selected base runtime that is under test for consistency.
 To add particular packages to the set you diff, add their dependencies to the project.json in this project and they will be pulled in and published in the standalone directory './fx'.
