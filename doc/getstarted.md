@@ -8,17 +8,17 @@ GitHub repo for directions on building.
 
 ## Dependencies
 
-* dotnet cli - All the utilites in the repo rely on dotnet cli for packages and building.  
+* dotnet cli - All the utilities in the repo rely on dotnet cli for packages and building.  
   This tool needs to be on the path.  (Note: this should a version after the pre-V1 RC1 
   build since that does not include all the features needed.)
 * git - The analyze tool uses git diff to check for textual differences since this it's 
   consistent across platforms and fast. 
 
 
-## Build
+## Build the tools
 
 Build mcgutils using the build script in the root of the repo - (build.\{cmd,sh\}). By 
-default the script just builds the tools and does not publish them in a seperate directory. 
+default the script just builds the tools and does not publish them in a separate directory. 
 To install the utilities add the '-p'flag which publishes each utility as a standalone app 
 in a directory under ./bin in the root of the repo.  Additionally to publish the default set 
 of frameworks that can be used for diff'ing cross-platform add '-f'.
@@ -34,9 +34,23 @@ build.sh [-p] [-h] [-b <BUILD TYPE>]
     -f              : Install scratch framework directory in <script_root>/fx.
 ```
 
+## 50,000 ft view
+
+There are two different different diff tools in this repo and they both work together to make a 
+diff run.  The first mcgdiff, is the tool that knows how to dump a \*.dasm file.  It's intended 
+to be simple.  It takes a base and/or diff crossgen and drives it to produce a \*.dasm file on the 
+specified output path.  Mcgdiff doesn't have any internal knowledge of frameworks, file names 
+or directory names, rather it is a low level tool for generating disassembly output.  Corediff 
+on the on the other hand knows about interesting frameworks to generate output for, understands 
+the structure of the built test tree in CoreCLR, and generally holds the "how" or the policy part 
+of a diff run.  With this context, corediff drives the mcgdiff tool to make an output a particular 
+directory structure for coreclr.  With this in mind what follows is an outline of a few ways to 
+generate diffs for CoreCLR using corediff and mcgdiff.  This is a tactical approach and it tries 
+to avoid extraneous discussion of internals.
+
 ## Producing a baseline for CoreCLR
 
-Today there are two scenarios within CoreCLR depending on platform.  This is largly a function 
+Today there are two scenarios within CoreCLR depending on platform.  This is largely a function 
 of building the tests and windows is further ahead here.  Today you have to consume the results 
 of a Windows test build on Linux and OSX to run tests and the set up can be involved.  (See 
 CoreCLR repo unix test instructions 
@@ -63,7 +77,7 @@ Steps:
 > ls <output_directory>/base/*
 ```
 The output directory will contain a list of *.dasm files produced by the code generator. These 
-are ultimatly what are diff'ed.
+are ultimately what are diff'ed.
 
 ### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
 
@@ -81,11 +95,11 @@ Steps:
 ```
 > corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
 ```
-* Check putput directory
+* Check output directory
 ```
 > ls <output_directory>/base/*
 ```
-The base output directory should contane a tree that mirrors the test tree containing a *.dasm for 
+The base output directory should contain a tree that mirrors the test tree containing a *.dasm for 
 each assembly it found.
 
 This scenario will take a fair bit longer than the first since it traverses and identifies test 
@@ -99,7 +113,7 @@ and use a path to a different CoreCLR crossgen.
 This diff system is built on crossgen so producing a new crossgen with a new code generator - either 
 through modifying your base CoreCLR repo, adding a second repo with changes, or pulling from build 
 lab resource - and running it with '--diff' will produce a parallel 'diff' tree in the output with 
-diffable *.dasm.
+diff'able *.dasm.
 
 Below are the two scenarios listed above with modifications for producing a 'diff' tree.
 
@@ -146,8 +160,8 @@ ls <output_directory>/diff/*
 
 ## Putting it all together
 
-In the above example we showed how to produce base and diff *.dasm in seperate steps but if a developer has 
-two seperate sets of CoreCLR binaries - produced from two CoreCLR repos, or extracted from the lab - both 
+In the above example we showed how to produce base and diff *.dasm in separate steps but if a developer has 
+two separate sets of CoreCLR binaries - produced from two CoreCLR repos, or extracted from the lab - both 
 '--base' and '--diff' arguments to corediff may be specified at the same time.  The tool will run the inputs 
 through both tools (though not in parallel today) and produce the 'base' and 'diff' directories of output.
 
@@ -159,7 +173,7 @@ Note: that this may be used with either the built 'core_root' or with the mcguti
 
 ### Notes on tags
 
-Corediff allows a user supplied '--tag' on the commandline.  This tag can be used to label different 
+Corediff allows a user supplied '--tag' on the command-line.  This tag can be used to label different 
 directories of *.dasm with in the output directory so multiple (more than two) runs can be done. 
 This supports a scenario like the following:
 
@@ -173,7 +187,7 @@ This supports a scenario like the following:
 * Produce tagged output by invoking corediff --diff ... --tag "reviewed_final"
 * ...
 
-The above scenario should show that there is some flexability in the work flow.
+The above scenario should show that there is some flexibility in the work flow.
 
 ## Analyzing diffs
 
@@ -185,7 +199,7 @@ dataset vs the diff dataset.
 
 Here is the help output:
 ```
-russellhadley@Hoplite mcgutils (analyze)]$ analyze --help
+$ analyze --help
 usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
                [--csv <arg>]
 
@@ -193,7 +207,7 @@ usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
     -d, --diff <arg>     Diff file or directory.
     -r, --recursive      Search directories recursively.
     -c, --count <arg>    Count of files and methods (at most) to output
-                         in the symmary. (count) improvements and
+                         in the summary. (count) improvements and
                          (count) regressions of each will be included.
                          (default 5)
     -w, --warn           Generate warning output for files/methods that
