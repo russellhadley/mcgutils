@@ -5,6 +5,7 @@
 **/bin
 **/obj
 /fx
+.vscode
 
 # project system lock files
 project.lock.json
