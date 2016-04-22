@@ -10,7 +10,7 @@ To build/setup:
   your path.
 * Follow publish directions for the mcgutils repo in the root.  This will 
   put the tools on your path.
-* Generate corediff disasm run.  See [Getting Started](../../doc/gettingstarted.md) 
+* Generate corediff disasm run.  See [Getting Started](../../doc/getstarted.md) 
   for directions how.
 * Run analyze --base `<base path>` --diff `<diff path>` to produce a summary of the 
   differences.
