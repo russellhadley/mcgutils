@@ -11,12 +11,12 @@
 function usage
 {
     echo ""
-    echo "build.sh [-p] [-h] [-b <BUILD TYPE>]"
+    echo "build.sh [-b <BUILD TYPE>] [-f] [-h] [-p]"
     echo ""
-    echo "    -b <BUILD TYPE> : Build type."
-    echo "    -h              : Show this message"
-    echo "    -p              : Publish apps."
-    echo "    -f              : Install scratch framework directory in <script_root>/fx."
+    echo "    -b <BUILD TYPE> : Build type, can be Debug or Release."
+    echo "    -h              : Show this message."
+    echo "    -f              : Install default framework directory in <script_root>/fx."
+    echo "    -p              : Publish utilites."
     echo ""
 }
 
@@ -29,7 +29,7 @@ platform="`dotnet --info | awk '/RID/ {print $2}'`"
 appInstallDir="$scriptDir/bin"
 fxInstallDir="$scriptDir/fx"
 
-# process for'-h', '-p', and '-b <arg>'
+# process for '-h', '-p', 'f', and '-b <arg>'
 while getopts "hpfb:" opt; do
     case "$opt" in
     h)
@@ -65,9 +65,10 @@ done
 
 if [ "$fx" == true ]; then
     dotnet publish -c $buildType -o $fxInstallDir ./src/packages
-    # remove package version of mscorlib* - refer to core root version for
-    # diff testing.
-    rm $fxInstallDir/mscorlib*
+
+    if [ -f $fxInstallDir/mscorlib* ]; then
+        # remove package version of mscorlib* - refer to core root version for
+        # diff testing.
+        rm $fxInstallDir/mscorlib*
+    fi
 fi
-
-

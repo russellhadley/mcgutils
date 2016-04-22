@@ -9,19 +9,22 @@ GitHub repo for directions on building.
 ## Dependencies
 
 * dotnet cli - All the utilities in the repo rely on dotnet cli for packages and building.  
-  This tool needs to be on the path.  (Note: this should a version after the pre-V1 RC1 
-  build since that does not include all the features needed.)
-* git - The analyze tool uses git diff to check for textual differences since this it's 
-  consistent across platforms and fast. 
-
+  The `dotnet` tool needs to be on the path. You can find information on installing dotnet cli
+  on the official product page at http://dotnet.github.io/ or in the [dotnet cli GitHub repo](https://github.com/dotnet/cli)
+  (where you can install more recent, "daily" builds). If installing from the GitHub repo packages,
+  be sure to install the ".NET Core SDK" package, which includes the command-line tool.
+  Note: mcgutils require a dotnet cli version after the pre-V1 RC1 build (version?)
+  since that build does not include all the required features.
+* git - The analyze tool uses `git diff` to check for textual differences since this is
+  consistent across platforms, and fast.
 
 ## Build the tools
 
-Build mcgutils using the build script in the root of the repo - (build.\{cmd,sh\}). By 
+Build mcgutils using the build script in the root of the repo: build.\{cmd,sh\}. By 
 default the script just builds the tools and does not publish them in a separate directory. 
-To install the utilities add the '-p'flag which publishes each utility as a standalone app 
-in a directory under ./bin in the root of the repo.  Additionally to publish the default set 
-of frameworks that can be used for diff'ing cross-platform add '-f'.
+To install the utilities add the '-p' flag which publishes each utility as a standalone app 
+in a directory under ./bin in the root of the repo.  Additionally, to publish the default set 
+of frameworks that can be used for diff'ing cross-platform, add '-f'.
 
 ```
  $ ./build.sh -h
@@ -34,14 +37,14 @@ build.sh [-p] [-h] [-b <BUILD TYPE>]
     -f              : Install scratch framework directory in <script_root>/fx.
 ```
 
-## 50,000 ft view
+## 50,000 foot view
 
 There are two different different diff tools in this repo and they both work together to make a 
-diff run.  The first mcgdiff, is the tool that knows how to dump a \*.dasm file.  It's intended 
+diff run.  The first, mcgdiff, is the tool that knows how to generate assembly code into a \*.dasm file.  It's intended 
 to be simple.  It takes a base and/or diff crossgen and drives it to produce a \*.dasm file on the 
 specified output path.  Mcgdiff doesn't have any internal knowledge of frameworks, file names 
 or directory names, rather it is a low level tool for generating disassembly output.  Corediff 
-on the on the other hand knows about interesting frameworks to generate output for, understands 
+on the other hand knows about interesting frameworks to generate output for, understands 
 the structure of the built test tree in CoreCLR, and generally holds the "how" or the policy part 
 of a diff run.  With this context, corediff drives the mcgdiff tool to make an output a particular 
 directory structure for coreclr.  With this in mind what follows is an outline of a few ways to 
@@ -51,7 +54,7 @@ to avoid extraneous discussion of internals.
 ## Producing a baseline for CoreCLR
 
 Today there are two scenarios within CoreCLR depending on platform.  This is largely a function 
-of building the tests and windows is further ahead here.  Today you have to consume the results 
+of building the tests and Windows is further ahead here.  Today you have to consume the results 
 of a Windows test build on Linux and OSX to run tests and the set up can be involved.  (See 
 CoreCLR repo unix test instructions 
 [here](https://github.com/dotnet/coreclr/blob/master/Documentation/building/unix-test-instructions.md)) 
@@ -81,7 +84,7 @@ are ultimately what are diff'ed.
 
 ### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
 
-In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform. This 
+In this scenario follow the steps outlined in CoreCLR to set up the tests for a given platform. This 
 will create a "core_root" directory in the built test assets that has all the platform frameworks 
 as well as test dependencies.  This should be used as the 'core_root' for the test run in addition 
 to providing the test assemblies.
@@ -174,7 +177,7 @@ Note: that this may be used with either the built 'core_root' or with the mcguti
 ### Notes on tags
 
 Corediff allows a user supplied '--tag' on the command-line.  This tag can be used to label different 
-directories of *.dasm with in the output directory so multiple (more than two) runs can be done. 
+directories of *.dasm in the output directory so multiple (more than two) runs can be done. 
 This supports a scenario like the following:
 
 * Build base CoreCLR
@@ -266,5 +269,5 @@ Top method improvements by size (bytes):
 3762 total methods with size differences.
 ```
 
-If the --cvs `<file_name>` or --json `<file_name>` is passed, all the diff data extracted and analyzed 
+If `--csv <file_name>` or `--json <file_name>` is passed, all the diff data extracted and analyzed 
 will be written out for futher analysis.
