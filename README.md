@@ -6,13 +6,20 @@ producing diffs of codegen changes.
 
 ## Summary
 
-Run `build.\{cmd|sh\} -f -p` to build the tools.
+To prepare the tools for use, from the root of the cloned mcgutils repo, do the following: 
+1. Download required package dependencies: `dotnet restore`
+    * NOTE: On Mac, you need to first use `ulimit -n 2048` or the `dotnet restore` will fail.
+2. Build and publish the tools: `build.{cmd|sh} -f -p`
 
-This will create a `bin` directory
-in the root of the repo that contains the built tools, and a `fx` directory also in
-the repo root, with a set of frameworks assemblies that can be used for asm diffs.
-Add subdirectories for each tool to your path and you can call them to generate/analyze 
-*.dasm files.
+This will create the following directories in the repo root:
+1. `bin` - contains one directory for each built tool.
+2. `fx` - contains a set of frameworks assemblies that can be used for asm diffs.
+
+Add each tool subdirectory to your path so you can easily invoke them, e.g.:
+```
+set mcgutils=<path to root of mcgutils clone>
+set PATH=%PATH%;%mcgutils%\bin\mcgdiff;%mcgutils%\bin\corediff;%mcgutils%\bin\analyze
+```
 
 For a more complete introduction look at the [getting started guide](doc/getstarted.md).
 
@@ -98,10 +105,10 @@ Sample help commandline:
 
 ## packages
 
-This is a skeleton project that exists to pull down a predicitable set of framework 
+This is a skeleton project that exists to pull down a predictable set of framework 
 assemblies and publish them in the root in the subdirectory './fx'.  Today this is 
 set to the RC2 version of the NetCoreApp1.0 frameworks.  When this package is installed 
-via the build.\{cmd|sh\} script this set can be used on any supported platform for 
+via the `build.{cmd|sh}` script this set can be used on any supported platform for 
 diffing.  Note: The RC2 mscorlib.dll is removed, as this assembly should be updated from 
 the selected base runtime that is under test for consistency. To add particular packages 
 to the set you diff, add their dependencies to the project.json in this project and 
