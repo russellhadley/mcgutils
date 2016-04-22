@@ -3,7 +3,7 @@
 ## Assumptions
 
 This guide assumes that you have built a CoreCLR and have produced a crossgen 
-executable and mscorlib assembly. See the [CoreCLR](https://github.com/dotnet/coreclr) 
+executable and mscorlib.dll assembly. See the [CoreCLR](https://github.com/dotnet/coreclr) 
 GitHub repo for directions on building.
 
 ## Dependencies
@@ -20,28 +20,28 @@ GitHub repo for directions on building.
 
 ## Build the tools
 
-Build mcgutils using the build script in the root of the repo: build.\{cmd,sh\}. By 
+Build mcgutils using the build script in the root of the repo: `build.{cmd,sh}`. By 
 default the script just builds the tools and does not publish them in a separate directory. 
-To install the utilities add the '-p' flag which publishes each utility as a standalone app 
-in a directory under ./bin in the root of the repo.  Additionally, to publish the default set 
-of frameworks that can be used for diff'ing cross-platform, add '-f'.
+To publish the utilities add the '-p' flag which publishes each utility as a standalone app 
+in a directory under ./bin in the root of the repo.  Additionally, to download the default set 
+of framework assemblies that can be used for generating asm diffs, add '-f'.
 
 ```
  $ ./build.sh -h
 
-build.sh [-p] [-h] [-b <BUILD TYPE>]
+build.sh [-b <BUILD TYPE>] [-f] [-h] [-p]
 
-    -b <BUILD TYPE> : Build type.
-    -h              : Show this message
-    -p              : Publish apps.
-    -f              : Install scratch framework directory in <script_root>/fx.
+    -b <BUILD TYPE> : Build type, can be Debug or Release.
+    -h              : Show this message.
+    -f              : Install default framework directory in <script_root>/fx.
+    -p              : Publish utilites.
 ```
 
 ## 50,000 foot view
 
 There are two different different diff tools in this repo and they both work together to make a 
-diff run.  The first, mcgdiff, is the tool that knows how to generate assembly code into a \*.dasm file.  It's intended 
-to be simple.  It takes a base and/or diff crossgen and drives it to produce a \*.dasm file on the 
+diff run.  The first, mcgdiff, is the tool that knows how to generate assembly code into a `*.dasm` file.  It's intended 
+to be simple.  It takes a base and/or diff crossgen and drives it to produce a `*.dasm` file on the 
 specified output path.  Mcgdiff doesn't have any internal knowledge of frameworks, file names 
 or directory names, rather it is a low level tool for generating disassembly output.  Corediff 
 on the other hand knows about interesting frameworks to generate output for, understands 
