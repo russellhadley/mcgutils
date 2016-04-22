@@ -66,9 +66,6 @@ done
 if [ "$fx" == true ]; then
     dotnet publish -c $buildType -o $fxInstallDir ./src/packages
 
-    if [ -f $fxInstallDir/mscorlib* ]; then
-        # remove package version of mscorlib* - refer to core root version for
-        # diff testing.
-        rm $fxInstallDir/mscorlib*
-    fi
+    # remove package version of mscorlib* - refer to core root version for diff testing.
+    rm $fxInstallDir/mscorlib*
 fi
