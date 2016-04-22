@@ -129,7 +129,10 @@ namespace ManagedCodeGen
         
         public class FileDelta {
             public string path;
-            public int deltaBytes;
+            public int baseBytes;
+            public int diffBytes;
+            public int deltaBytes { get { return diffBytes - baseBytes; } }
+            public double ratioBytes { get { return (double)deltaBytes / (double)baseBytes; } }
             public IEnumerable<MethodInfo> methodsOnlyInBase;
             public IEnumerable<MethodInfo> methodsOnlyInDiff;
             public IEnumerable<MethodDelta> methodDeltaList;
@@ -140,6 +143,7 @@ namespace ManagedCodeGen
             public int baseBytes;
             public int diffBytes;
             public int deltaBytes { get { return diffBytes - baseBytes; } }
+            public double ratioBytes { get { return (double)deltaBytes / (double)baseBytes; } }
             public IEnumerable<int> baseOffsets;
             public IEnumerable<int> diffOffsets;
         }
@@ -227,7 +231,8 @@ namespace ManagedCodeGen
                         .OrderByDescending(r => r.deltaBytes);
                 return new FileDelta {
                     path = b.path,
-                    deltaBytes = deltaList.Sum(x => x.deltaBytes),
+                    baseBytes = deltaList.Sym(x => x.baseBytes),
+                    diffBytes = deltaList.Sym(x => x.diffBytes),
                     methodsOnlyInBase = b.methodList.Except(d.methodList, methodInfoComparer),
                     methodsOnlyInDiff = d.methodList.Except(b.methodList, methodInfoComparer), 
                     methodDeltaList = deltaList
@@ -274,29 +279,42 @@ namespace ManagedCodeGen
                 Console.WriteLine("\nTop file improvements by size (bytes):");
 
                 foreach (var fileDelta in sortedFileDelta.GetRange(fileDeltaIndex, fileCount)
-                                                        .Where(x => x.deltaBytes < 0)
-                                                        .OrderBy(x => x.deltaBytes)) {
+                                                         .Where(x => x.deltaBytes < 0)
+                                                         .OrderBy(x => x.deltaBytes)) {
                     Console.WriteLine("    {1} : {0}", fileDelta.path, fileDelta.deltaBytes);
                 }
             }
             
             Console.WriteLine("\n{0} total files with size differences.", sortedFileCount);
           
-            var sortedMethodDelta = fileDeltaList
-                                        .SelectMany(fd => fd.methodDeltaList, (fd, md) => new {
+            var sortedMethodDelta;
+            
+            if (ratio) {
+                sortedMethodData = fileDeltaList
+                                       .SelectMany(fd => fd.methodDeltaList, (fd, md) => new {
                                             path = fd.path,
                                             name = md.name,
-                                            deltaBytes = md.deltaBytes
-                                        }).OrderByDescending(x => x.deltaBytes).ToList();
+                                            delta = md.deltaBytes
+                                       }).OrderByDescending(x => x.delta).ToList();
+            }
+            else {
+                sortedMethodData = fileDeltaList
+                                       .SelectMany(fd => fd.methodDeltaList, (fd, md) => new {
+                                            path = fd.path,
+                                            name = md.name,
+                                            delta = md.ratioBytes,
+                                       }).OrderByDescending(x => x.delta).ToList();
+            }
+
             int sortedMethodCount = sortedMethodDelta.Count();
             int methodCount = (sortedMethodCount < requestedCount) 
                 ? sortedMethodCount : requestedCount;
-            if (sortedMethodDelta[0].deltaBytes > 0) {
+            if (sortedMethodDelta[0].delta > 0) {
                 Console.WriteLine("\nTop method regessions by size (bytes):");
                 
                 foreach (var method in sortedMethodDelta.GetRange(0, methodCount)
-                                                        .Where(x => x.deltaBytes > 0)) {
-                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.deltaBytes);
+                                                        .Where(x => x.delta > 0)) {
+                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.delta);
                 }
             }
 
@@ -306,9 +324,9 @@ namespace ManagedCodeGen
                 Console.WriteLine("\nTop method improvements by size (bytes):");
 
                 foreach (var method in sortedMethodDelta.GetRange(methodDeltaIndex, methodCount)
-                                                        .Where(x => x.deltaBytes < 0)
-                                                        .OrderBy(x => x.deltaBytes)) {
-                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.deltaBytes);
+                                                        .Where(x => x.delta < 0)
+                                                        .OrderBy(x => x.delta)) {
+                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.delta);
                 }
             }
             
@@ -391,7 +409,7 @@ namespace ManagedCodeGen
         public static void GenerateCSV(IEnumerable<FileDelta> compareList, string path) {
             using (var outputStream = System.IO.File.Create(path)) {
                 using (var outputStreamWriter = new StreamWriter(outputStream)) {
-                    outputStreamWriter.WriteLine("File, Method, Diff bytes, Base bytes");
+                    outputStreamWriter.WriteLine("File, Method, Diff bytes, Base bytes, Delta, Delta/Base");
                     foreach(var file in compareList) {
                         if (file.deltaBytes == 0) {
                             // Early out if there are no diff bytes.
@@ -399,7 +417,8 @@ namespace ManagedCodeGen
                         }
                         
                         foreach (var method in file.methodDeltaList) {
-                            outputStreamWriter.WriteLine("{0}, {1}, {2}, {3}", file.path, method.name, method.diffBytes, method.baseBytes);
+                            outputStreamWriter.WriteLine("{0}, {1}, {2}, {3}, {4}, {5}", file.path, 
+                            method.name, method.diffBytes, method.baseBytes, method.deltaBytes, method.ratioBytes);
                         }
                     }
                 }
