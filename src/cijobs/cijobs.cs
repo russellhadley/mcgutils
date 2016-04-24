@@ -116,7 +116,7 @@ namespace ManagedCodeGen
                     break;
                 }
                 case Command.Start: {
-                    Start(config).Wait();
+                    StartCommand.Start(config).Wait();
                     break;
                 }
                 default: {
@@ -136,16 +136,16 @@ namespace ManagedCodeGen
             //    if --job is specified, list job instances by id with details.
             //    if --job and --id is specified list particular job instance, status, and artifacts.
             // 
-            public static async Task List(Config config) {
+            public static async Task<string> List(Config config) {
                 using (var client = new HttpClient())
                 {
                     client.BaseAddress = new Uri("http://dotnet-ci.cloudapp.net/");
                     client.DefaultRequestHeaders.Accept.Clear();
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-                    string jobString = String.Format("job/dotnet_coreclr/job/{0}/api/json?&tree=jobs[name,url]", config.CoreclrBranchName);
+                    string productString = String.Format("job/dotnet_coreclr/job/{0}/api/json?&tree=jobs[name,url]", config.CoreclrBranchName);
 
-                    HttpResponseMessage response = await client.GetAsync(jobString);
+                    HttpResponseMessage response = await client.GetAsync(productString);
                     
                     if (response.IsSuccessStatusCode)
                     {
@@ -156,8 +156,9 @@ namespace ManagedCodeGen
                         
                         if (config.JobName != null) {
                             Job job = GetJob(product, config.JobName);
-                            var messageString = String.Format("job/dotnet_coreclr/job/master/job/{0}/api/json?&tree=builds[number,url],lastSuccessfulBuild[number,url]",
-                                              job.name);
+                            var jobString = String.Format(@"job/dotnet_coreclr/job/master/job/{0}", job.name);
+                            var messageString = String.Format("{0}/api/json?&tree=builds[number,url],lastSuccessfulBuild[number,url]",
+                                              jobString);
                                               
                             HttpResponseMessage jobResponse = await client.GetAsync(messageString);
                             
@@ -171,43 +172,70 @@ namespace ManagedCodeGen
                                 }
                                 catch (FormatException e)
                                 {
-                                    Console.WriteLine("Input string is not a sequence of digits.");
+                                    Console.WriteLine("Input string is not a sequence of digits.", e);
                                 }
                                 catch (OverflowException e)
                                 {
-                                    Console.WriteLine("The number cannot fit in an Int32.");
+                                    Console.WriteLine("The number cannot fit in an Int32.", e);
                                 }
                                 
-                                string buildMessage = String.Format("{0}/{1}/{2}/{3}", "job/dotnet_coreclr/job/master/job",
-                                 job.name , config.Number, "api/json?&tree=actions[lastBuiltRevision[SHA1]],artifacts[fileName,relativePath]");
+                                string buildString = String.Format("{0}/{1}/{2}", "job/dotnet_coreclr/job/master/job",
+                                    job.name , config.Number);
+                                string buildMessage = String.Format("{0}/{1}", buildString,
+                                    "api/json?&tree=actions[lastBuiltRevision[SHA1]],artifacts[fileName,relativePath]");
                                 Console.WriteLine(buildMessage);
                                 HttpResponseMessage buildResponse = await client.GetAsync(buildMessage);
-                                
                                 var buildNumberJson = await buildResponse.Content.ReadAsStringAsync();
-                                
                                 BuildInfo info = JsonConvert.DeserializeObject<BuildInfo>(buildNumberJson);
                                 
-                                foreach(var artifact in info.artifacts) {
-                                    Console.WriteLine("artifact {0}", artifact.fileName);
+                                if (config.DoCommand == Command.List) {
+                                    PrettyBuilds(Enumerable.Repeat(info, 1));
                                 }
+                                
+                                return String.Format("{0}/{1}", client.BaseAddress.ToString(), buildString);
                             }
                             else {
                                 foreach (var build in jobBuilds.builds) {
                                     Console.WriteLine("{0} : {1}", job.name, build.number);
                                 }
                                 Console.WriteLine("lastSuccessfulBuild : {0}", jobBuilds.lastSuccessfulBuild.number);
+                                
+                                string buildString = String.Format("{0}/{1}/{2}", "job/dotnet_coreclr/job/master/job",
+                                    job.name , jobBuilds.lastSuccessfulBuild.number);
+                                 
+                                 return String.Format(@"{0}/{1}",client.BaseAddress.ToString(), buildString);
                             }
                         }
                         else {
+                            List<Job> jobs = ListJobs(product, new Regex(config.MatchPattern)).ToList();
                             
-                            foreach(var job in ListJobs(product, new Regex(config.MatchPattern))) {
-                                Console.WriteLine("job {0}", job.name);
+                            if (config.DoCommand == Command.List) {
+                                PrettyJobs(jobs);
                             }
+                            
+                            // Return verified job string.
+                            return String.Format("{0}/{1}", client.BaseAddress.ToString(), productString);
                         }   
                     }
                     else {
                         // Error status code, dump the response.
                         Console.WriteLine(response.ToString());
+                        
+                        return "Error!";
+                    }
+                }
+            }
+
+            static void PrettyJobs (IEnumerable<Job> jobs) {
+                foreach(var job in jobs) {
+                    Console.WriteLine("job {0}", job.name);
+                }
+            }
+            
+            static void PrettyBuilds (IEnumerable<BuildInfo> buildInfoList) {
+                foreach (var buildInfo in buildInfoList) {
+                    foreach (var artifact in buildInfo.artifacts) {
+                        Console.WriteLine("artifact {0}", artifact.fileName);
                     }
                 }
             }
@@ -225,9 +253,15 @@ namespace ManagedCodeGen
             }
         }
         
-        static async Task Start(Config config) {
-            // create parameter string and post to Jenkins
-            ;
+        class CopyCommand {
+            
+        }
+        
+        class StartCommand {
+            public static async Task Start(Config config) {
+                // create parameter string and post to Jenkins
+                ;
+            }
         }
     }
 }
