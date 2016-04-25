@@ -202,17 +202,19 @@ namespace ManagedCodeGen
                 }
 
                 if (config.TestRoot != null) {
-                foreach (var dir in testDirectories) {
-                    string testRoot = config.TestRoot;
-                    string fullPathDir = Path.Combine(testRoot, dir);
-                    
-                    if (!Directory.Exists(fullPathDir)) {
-                        Console.WriteLine("can't find {0}", fullPathDir);
-                        continue;
-                    }
-                    
-                    commandArgs.Add(fullPathDir);
-                } 
+                    foreach (var dir in testDirectories) {
+                        string testRoot = config.TestRoot;
+                        string fullPathDir = Path.Combine(testRoot, dir);
+                        
+                        if (!Directory.Exists(fullPathDir)) {
+                            Console.WriteLine("can't find {0}", fullPathDir);
+                            continue;
+                        }
+                        
+                        commandArgs.Add(fullPathDir);
+                        // Set up resursive search
+                        commandArgs.Add("--recursive");
+                    } 
                 }
             }
             

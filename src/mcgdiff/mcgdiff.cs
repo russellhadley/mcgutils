@@ -267,17 +267,8 @@ namespace ManagedCodeGen
             // Process worklist and produce the info needed for the disasm engines.
             foreach (var path in assemblyList)
             {
-                FileAttributes attr;
-                
-                if (File.Exists(path)) {
-                    attr = File.GetAttributes(path);
-                }
-                else {
-                    Console.WriteLine("Can't find assembly {0}", path);
-                    continue;
-                }
-            
-                if ((attr & FileAttributes.Directory) == FileAttributes.Directory) {
+                // Handle directory case.
+                if (Directory.Exists(path)) {
                     
                     if (verbose)
                     {
@@ -292,7 +283,7 @@ namespace ManagedCodeGen
                     // Add info generated at this directory
                     assemblyInfoList.AddRange(directoryAssemblyInfoList);
                 }
-                else {
+                else if (File.Exists(path)) {
                     // This is the file case.
 
                     AssemblyInfo info = new AssemblyInfo {
@@ -302,6 +293,10 @@ namespace ManagedCodeGen
                     };
                             
                     assemblyInfoList.Add(info);
+                }
+                else {
+                    Console.WriteLine("Can't find {0}", path);
+                    continue;
                 }
             }
                             
