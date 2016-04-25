@@ -213,7 +213,7 @@ namespace ManagedCodeGen
                         
                         commandArgs.Add(fullPathDir);
                         // Set up resursive search
-                        commandArgs.Insert(0, "--recursive");
+                        commandArgs.Add("--recursive");
                     } 
                 }
             }
