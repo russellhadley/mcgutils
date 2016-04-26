@@ -2,12 +2,12 @@
 
 if ! dotnet --info; then 
     echo "Can't find dotnet! Please add to PATH."
-    exit 1
+    return 1
 fi
 
 if ! git --version; then 
     echo "Can't find git! Please add to PATH."
-    exit 1
+    return 1
 fi
 
 root=$(pwd)
