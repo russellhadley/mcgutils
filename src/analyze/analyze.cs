@@ -205,7 +205,7 @@ namespace ManagedCodeGen
                                  functionOffsets = x.Select(z => z)
                                                     .Where(z => z.functionOffset != 0)
                                                     .Select(z => z.functionOffset).ToList()
-                             });
+                             }).ToList();
         }
 
         // Compare base and diff file lists and produce a sorted list of method
