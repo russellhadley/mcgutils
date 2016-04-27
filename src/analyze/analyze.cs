@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Diagnostics;
 using System.CommandLine;
 using System.IO;
@@ -15,33 +19,33 @@ namespace ManagedCodeGen
     {
         public class Config
         {
-            private ArgumentSyntax syntaxResult;
-            private string basePath = null;
-            private string diffPath = null;
-            private bool recursive = false;
-            private bool full = false;
-            private bool warn = false;
-            private int count = 5;
-            private string json;
-            private string csv;
+            private ArgumentSyntax _syntaxResult;
+            private string _basePath = null;
+            private string _diffPath = null;
+            private bool _recursive = false;
+            private bool _full = false;
+            private bool _warn = false;
+            private int _count = 5;
+            private string _json;
+            private string _csv;
 
             public Config(string[] args)
             {
-                syntaxResult = ArgumentSyntax.Parse(args, syntax =>
+                _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
-                    syntax.DefineOption("b|base", ref basePath, "Base file or directory.");
-                    syntax.DefineOption("d|diff", ref diffPath, "Diff file or directory.");
-                    syntax.DefineOption("r|recursive", ref recursive, "Search directories recursively.");
-                    syntax.DefineOption("c|count", ref count,
+                    syntax.DefineOption("b|base", ref _basePath, "Base file or directory.");
+                    syntax.DefineOption("d|diff", ref _diffPath, "Diff file or directory.");
+                    syntax.DefineOption("r|recursive", ref _recursive, "Search directories recursively.");
+                    syntax.DefineOption("c|count", ref _count,
                         "Count of files and methods (at most) to output in the summary."
                       + " (count) improvements and (count) regressions of each will be included."
                       + " (default 5)");
-                    syntax.DefineOption("w|warn", ref warn,
+                    syntax.DefineOption("w|warn", ref _warn,
                         "Generate warning output for files/methods that only "
                       + "exists in one dataset or the other (only in base or only in diff).");
-                    syntax.DefineOption("json", ref json,
+                    syntax.DefineOption("json", ref _json,
                         "Dump analysis data to specified file in JSON format.");
-                    syntax.DefineOption("csv", ref csv, "Dump analysis data to specified file in CSV format.");
+                    syntax.DefineOption("csv", ref _csv, "Dump analysis data to specified file in CSV format.");
                 });
 
                 // Run validation code on parsed input to ensure we have a sensible scenario.
@@ -50,27 +54,27 @@ namespace ManagedCodeGen
 
             private void validate()
             {
-                if (basePath == null)
+                if (_basePath == null)
                 {
-                    syntaxResult.ReportError("Base path (--base) is required.");
+                    _syntaxResult.ReportError("Base path (--base) is required.");
                 }
 
-                if (diffPath == null)
+                if (_diffPath == null)
                 {
-                    syntaxResult.ReportError("Diff path (--diff) is required.");
+                    _syntaxResult.ReportError("Diff path (--diff) is required.");
                 }
             }
 
-            public string BasePath { get { return basePath; } }
-            public string DiffPath { get { return diffPath; } }
-            public bool Recursive { get { return recursive; } }
-            public bool Full { get { return full; } }
-            public bool Warn { get { return warn; } }
-            public int Count { get { return count; } }
-            public string CSVFileName { get { return csv; } }
-            public string JsonFileName { get { return json; } }
-            public bool DoGenerateJson { get { return json != null; } }
-            public bool DoGenerateCSV { get { return csv != null; } }
+            public string BasePath { get { return _basePath; } }
+            public string DiffPath { get { return _diffPath; } }
+            public bool Recursive { get { return _recursive; } }
+            public bool Full { get { return _full; } }
+            public bool Warn { get { return _warn; } }
+            public int Count { get { return _count; } }
+            public string CSVFileName { get { return _csv; } }
+            public string JsonFileName { get { return _json; } }
+            public bool DoGenerateJson { get { return _json != null; } }
+            public bool DoGenerateCSV { get { return _csv != null; } }
         }
 
         public class FileInfo

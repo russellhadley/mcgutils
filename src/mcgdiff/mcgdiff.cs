@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 //  mcgdiff - The managed code gen diff tool scripts the generation of
@@ -32,43 +36,43 @@ namespace ManagedCodeGen
     // Define options to be parsed 
     public class Config
     {
-        private ArgumentSyntax syntaxResult;
-        private string baseExe = null;
-        private string diffExe = null;
-        private string rootPath = null;
-        private string tag = null;
-        private string fileName = null;
-        private IReadOnlyList<string> assemblyList = Array.Empty<string>();
-        private bool wait = false;
-        private bool recursive = false;
-        private IReadOnlyList<string> methods = Array.Empty<string>();
-        private IReadOnlyList<string> platformPaths = Array.Empty<string>();
-        private bool dumpGCInfo = false;
-        private bool verbose = false;
+        private ArgumentSyntax _syntaxResult;
+        private string _baseExe = null;
+        private string _diffExe = null;
+        private string _rootPath = null;
+        private string _tag = null;
+        private string _fileName = null;
+        private IReadOnlyList<string> _assemblyList = Array.Empty<string>();
+        private bool _wait = false;
+        private bool _recursive = false;
+        private IReadOnlyList<string> _methods = Array.Empty<string>();
+        private IReadOnlyList<string> _platformPaths = Array.Empty<string>();
+        private bool _dumpGCInfo = false;
+        private bool _verbose = false;
 
         public Config(string[] args)
         {
-            syntaxResult = ArgumentSyntax.Parse(args, syntax =>
+            _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
             {
-                syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
-                syntax.DefineOption("d|diff", ref diffExe, "The diff compiler exe.");
-                syntax.DefineOption("o|output", ref rootPath, "The output path.");
-                syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
-                syntax.DefineOption("f|file", ref fileName, "Name of file to take list of assemblies from. Both a file and assembly list can be used.");
-                syntax.DefineOption("gcinfo", ref dumpGCInfo, "Add GC info to the disasm output.");
-                syntax.DefineOption("v|verbose", ref verbose, "Enable verbose output.");
-                var waitArg = syntax.DefineOption("w|wait", ref wait, "Wait for debugger to attach.");
+                syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe.");
+                syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe.");
+                syntax.DefineOption("o|output", ref _rootPath, "The output path.");
+                syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
+                syntax.DefineOption("f|file", ref _fileName, "Name of file to take list of assemblies from. Both a file and assembly list can be used.");
+                syntax.DefineOption("gcinfo", ref _dumpGCInfo, "Add GC info to the disasm output.");
+                syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output.");
+                var waitArg = syntax.DefineOption("w|wait", ref _wait, "Wait for debugger to attach.");
                 waitArg.IsHidden = true;
 
-                syntax.DefineOption("r|recursive", ref recursive, "Scan directories recursively.");
-                syntax.DefineOptionList("p|platform", ref platformPaths, "Path to platform assemblies");
-                var methodsArg = syntax.DefineOptionList("m|methods", ref methods,
+                syntax.DefineOption("r|recursive", ref _recursive, "Scan directories recursively.");
+                syntax.DefineOptionList("p|platform", ref _platformPaths, "Path to platform assemblies");
+                var methodsArg = syntax.DefineOptionList("m|methods", ref _methods,
                     "List of methods to disasm.");
                 methodsArg.IsHidden = true;
 
                 // Warning!! - Parameters must occur after options to preserve parsing semantics.
 
-                syntax.DefineParameterList("assembly", ref assemblyList, "The list of assemblies or directories to scan for assemblies.");
+                syntax.DefineParameterList("assembly", ref _assemblyList, "The list of assemblies or directories to scan for assemblies.");
             });
 
             // Run validation code on parsed input to ensure we have a sensible scenario.
@@ -88,78 +92,78 @@ namespace ManagedCodeGen
         //
         private void validate()
         {
-            if ((baseExe == null) && (diffExe == null))
+            if ((_baseExe == null) && (_diffExe == null))
             {
-                syntaxResult.ReportError("Specify --base and/or --diff.");
+                _syntaxResult.ReportError("Specify --base and/or --diff.");
             }
 
-            if ((tag != null) && (diffExe != null) && (baseExe != null))
+            if ((_tag != null) && (_diffExe != null) && (_baseExe != null))
             {
-                syntaxResult.ReportError("Multiple compilers with the same tag: Specify --diff OR --base seperatly with --tag (one compiler for one tag).");
+                _syntaxResult.ReportError("Multiple compilers with the same tag: Specify --diff OR --base seperatly with --tag (one compiler for one tag).");
             }
 
-            if ((fileName == null) && (assemblyList.Count == 0))
+            if ((_fileName == null) && (_assemblyList.Count == 0))
             {
-                syntaxResult.ReportError("No input: Specify --file <arg> or list input assemblies.");
+                _syntaxResult.ReportError("No input: Specify --file <arg> or list input assemblies.");
             }
 
             // Check that we can find the baseExe.
-            if (baseExe != null)
+            if (_baseExe != null)
             {
-                if (!File.Exists(baseExe))
+                if (!File.Exists(_baseExe))
                 {
-                    syntaxResult.ReportError("Can't find --base tool.");
+                    _syntaxResult.ReportError("Can't find --base tool.");
                 }
                 else
                 {
                     // Set to full path for the command resolution logic.
-                    string fullBasePath = Path.GetFullPath(baseExe);
-                    baseExe = fullBasePath;
+                    string fullBasePath = Path.GetFullPath(_baseExe);
+                    _baseExe = fullBasePath;
                 }
             }
 
             // Check that we can find the diffExe.
-            if (diffExe != null)
+            if (_diffExe != null)
             {
-                if (!File.Exists(diffExe))
+                if (!File.Exists(_diffExe))
                 {
-                    syntaxResult.ReportError("Can't find --diff tool.");
+                    _syntaxResult.ReportError("Can't find --diff tool.");
                 }
                 else
                 {
                     // Set to full path for command resolution logic.
-                    string fullDiffPath = Path.GetFullPath(diffExe);
-                    diffExe = fullDiffPath;
+                    string fullDiffPath = Path.GetFullPath(_diffExe);
+                    _diffExe = fullDiffPath;
                 }
             }
 
-            if (fileName != null)
+            if (_fileName != null)
             {
-                if (!File.Exists(fileName))
+                if (!File.Exists(_fileName))
                 {
-                    var message = String.Format("Error reading input file {0}, file not found.", fileName);
-                    syntaxResult.ReportError(message);
+                    var message = String.Format("Error reading input file {0}, file not found.", _fileName);
+                    _syntaxResult.ReportError(message);
                 }
             }
         }
 
         public bool HasUserAssemblies { get { return AssemblyList.Count > 0; } }
         public bool DoFileOutput { get { return (this.RootPath != null); } }
-        public bool WaitForDebugger { get { return wait; } }
-        public bool GenerateBaseline { get { return (baseExe != null); } }
-        public bool GenerateDiff { get { return (diffExe != null); } }
-        public bool HasTag { get { return (tag != null); } }
-        public bool Recursive { get { return recursive; } }
-        public bool UseFileName { get { return (fileName != null); } }
-        public bool DumpGCInfo { get { return dumpGCInfo; } }
-        public bool DoVerboseOutput { get { return verbose; } }
-        public string BaseExecutable { get { return baseExe; } }
-        public string DiffExecutable { get { return diffExe; } }
-        public string RootPath { get { return rootPath; } }
-        public IReadOnlyList<string> PlatformPaths { get { return platformPaths; } }
-        public string Tag { get { return tag; } }
-        public string FileName { get { return fileName; } }
-        public IReadOnlyList<string> AssemblyList { get { return assemblyList; } }
+        public bool WaitForDebugger { get { return _wait; } }
+        public bool GenerateBaseline { get { return (_baseExe != null); } }
+        public bool GenerateDiff { get { return (_diffExe != null); } }
+        public bool HasTag { get { return (_tag != null); } }
+        public bool Recursive { get { return _recursive; } }
+        public bool UseFileName { get { return (_fileName != null); } }
+        public bool DumpGCInfo { get { return _dumpGCInfo; } }
+        public bool DoVerboseOutput { get { return _verbose; } }
+        public string BaseExecutable { get { return _baseExe; } }
+        public string DiffExecutable { get { return _diffExe; } }
+        public string RootPath { get { return _rootPath; } }
+        public IReadOnlyList<string> PlatformPaths { get { return _platformPaths; } }
+        public string Tag { get { return _tag; } }
+        public string FileName { get { return _fileName; } }
+        public IReadOnlyList<string> AssemblyList { get { return _assemblyList; } }
     }
 
     public class AssemblyInfo
@@ -416,25 +420,25 @@ namespace ManagedCodeGen
 
         private class DisasmEngine
         {
-            private string executablePath;
-            private Config config;
-            private string rootPath = null;
-            private IReadOnlyList<string> platformPaths;
-            private List<AssemblyInfo> assemblyInfoList;
+            private string _executablePath;
+            private Config _config;
+            private string _rootPath = null;
+            private IReadOnlyList<string> _platformPaths;
+            private List<AssemblyInfo> _assemblyInfoList;
             public bool doGCDump = false;
             public bool verbose = false;
-            private int errorCount = 0;
+            private int _errorCount = 0;
 
-            public int ErrorCount { get { return errorCount; } }
+            public int ErrorCount { get { return _errorCount; } }
 
             public DisasmEngine(string executable, Config config, string outputPath,
                 List<AssemblyInfo> assemblyInfoList)
             {
-                this.config = config;
-                executablePath = executable;
-                rootPath = outputPath;
-                platformPaths = config.PlatformPaths;
-                this.assemblyInfoList = assemblyInfoList;
+                _config = config;
+                _executablePath = executable;
+                _rootPath = outputPath;
+                _platformPaths = config.PlatformPaths;
+                _assemblyInfoList = assemblyInfoList;
 
                 this.doGCDump = config.DumpGCInfo;
                 this.verbose = config.DoVerboseOutput;
@@ -443,7 +447,7 @@ namespace ManagedCodeGen
             public void GenerateAsm()
             {
                 // Build a command per assembly to generate the asm output.
-                foreach (var assembly in assemblyInfoList)
+                foreach (var assembly in _assemblyInfoList)
                 {
                     string fullPathAssembly = Path.Combine(assembly.Path, assembly.Name);
 
@@ -457,14 +461,14 @@ namespace ManagedCodeGen
                     List<string> commandArgs = new List<string>() { fullPathAssembly };
 
                     // Set platform assermbly path if it's defined.
-                    if (platformPaths.Count > 0)
+                    if (_platformPaths.Count > 0)
                     {
                         commandArgs.Insert(0, "/Platform_Assemblies_Paths");
-                        commandArgs.Insert(1, String.Join(" ", platformPaths));
+                        commandArgs.Insert(1, String.Join(" ", _platformPaths));
                     }
 
                     Command generateCmd = Command.Create(
-                        executablePath,
+                        _executablePath,
                         commandArgs);
 
                     // Set up environment do disasm.
@@ -480,16 +484,16 @@ namespace ManagedCodeGen
 
                     if (this.verbose)
                     {
-                        Console.WriteLine("Running: {0} {1}", executablePath, String.Join(" ", commandArgs));
+                        Console.WriteLine("Running: {0} {1}", _executablePath, String.Join(" ", commandArgs));
                     }
 
                     CommandResult result;
 
-                    if (rootPath != null)
+                    if (_rootPath != null)
                     {
                         // Generate path to the output file
                         var assemblyFileName = Path.ChangeExtension(assembly.Name, ".dasm");
-                        var path = Path.Combine(rootPath, assembly.OutputPath, assemblyFileName);
+                        var path = Path.Combine(_rootPath, assembly.OutputPath, assemblyFileName);
 
                         PathUtility.EnsureParentDirectory(path);
 
@@ -515,8 +519,8 @@ namespace ManagedCodeGen
 
                     if (result.ExitCode != 0)
                     {
-                        Console.WriteLine("Error running {0} on {1}", executablePath, fullPathAssembly);
-                        errorCount++;
+                        Console.WriteLine("Error running {0} on {1}", _executablePath, fullPathAssembly);
+                        _errorCount++;
                     }
                 }
             }

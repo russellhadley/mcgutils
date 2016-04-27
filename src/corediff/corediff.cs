@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Diagnostics;
 using System.CommandLine;
 using System.IO;
@@ -10,32 +14,32 @@ namespace ManagedCodeGen
 {
     public class corediff
     {
-        private static string asmTool = "mcgdiff";
+        private static string s_asmTool = "mcgdiff";
 
         public class Config
         {
-            private ArgumentSyntax syntaxResult;
-            private string baseExe = null;
-            private string diffExe = null;
-            private string outputPath = null;
-            private string tag = null;
-            private string platformPath = null;
-            private string testPath = null;
-            private bool mscorlibOnly = false;
-            private bool frameworksOnly = false;
+            private ArgumentSyntax _syntaxResult;
+            private string _baseExe = null;
+            private string _diffExe = null;
+            private string _outputPath = null;
+            private string _tag = null;
+            private string _platformPath = null;
+            private string _testPath = null;
+            private bool _mscorlibOnly = false;
+            private bool _frameworksOnly = false;
 
             public Config(string[] args)
             {
-                syntaxResult = ArgumentSyntax.Parse(args, syntax =>
+                _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
-                    syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
-                    syntax.DefineOption("d|diff", ref diffExe, "The diff compiler exe.");
-                    syntax.DefineOption("o|output", ref outputPath, "The output path.");
-                    syntax.DefineOption("t|tag", ref tag, "Name of root in output directory.  Allows for many sets of output.");
-                    syntax.DefineOption("m|mscorlibonly", ref mscorlibOnly, "Disasm mscorlib only");
-                    syntax.DefineOption("f|frameworksonly", ref frameworksOnly, "Disasm frameworks only");
-                    syntax.DefineOption("core_root", ref platformPath, "Path to test CORE_ROOT.");
-                    syntax.DefineOption("test_root", ref testPath, "Path to test tree");
+                    syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe.");
+                    syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe.");
+                    syntax.DefineOption("o|output", ref _outputPath, "The output path.");
+                    syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
+                    syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
+                    syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
+                    syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
+                    syntax.DefineOption("test_root", ref _testPath, "Path to test tree");
                 });
 
                 // Run validation code on parsed input to ensure we have a sensible scenario.
@@ -45,52 +49,52 @@ namespace ManagedCodeGen
 
             private void validate()
             {
-                if (platformPath == null)
+                if (_platformPath == null)
                 {
-                    syntaxResult.ReportError("Specifiy --core_root <path>");
+                    _syntaxResult.ReportError("Specifiy --core_root <path>");
                 }
 
-                if ((mscorlibOnly == false) &&
-                    (frameworksOnly == false) && (testPath == null))
+                if ((_mscorlibOnly == false) &&
+                    (_frameworksOnly == false) && (_testPath == null))
                 {
-                    syntaxResult.ReportError("Specify --test_root <path>");
+                    _syntaxResult.ReportError("Specify --test_root <path>");
                 }
 
-                if (outputPath == null)
+                if (_outputPath == null)
                 {
-                    syntaxResult.ReportError("Specify --output <path>");
+                    _syntaxResult.ReportError("Specify --output <path>");
                 }
 
-                if ((baseExe == null) && (diffExe == null))
+                if ((_baseExe == null) && (_diffExe == null))
                 {
-                    syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
+                    _syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
                 }
             }
 
-            public string CoreRoot { get { return platformPath; } }
-            public string TestRoot { get { return testPath; } }
-            public string PlatformPath { get { return platformPath; } }
-            public string BaseExecutable { get { return baseExe; } }
-            public bool HasBaseExeutable { get { return (baseExe != null); } }
-            public string DiffExecutable { get { return diffExe; } }
-            public bool HasDiffExecutable { get { return (diffExe != null); } }
-            public string OutputPath { get { return outputPath; } }
-            public string Tag { get { return tag; } }
-            public bool HasTag { get { return (tag != null); } }
-            public bool MSCorelibOnly { get { return mscorlibOnly; } }
-            public bool FrameworksOnly { get { return frameworksOnly; } }
+            public string CoreRoot { get { return _platformPath; } }
+            public string TestRoot { get { return _testPath; } }
+            public string PlatformPath { get { return _platformPath; } }
+            public string BaseExecutable { get { return _baseExe; } }
+            public bool HasBaseExeutable { get { return (_baseExe != null); } }
+            public string DiffExecutable { get { return _diffExe; } }
+            public bool HasDiffExecutable { get { return (_diffExe != null); } }
+            public string OutputPath { get { return _outputPath; } }
+            public string Tag { get { return _tag; } }
+            public bool HasTag { get { return (_tag != null); } }
+            public bool MSCorelibOnly { get { return _mscorlibOnly; } }
+            public bool FrameworksOnly { get { return _frameworksOnly; } }
             public bool DoMSCorelib { get { return true; } }
-            public bool DoFrameworks { get { return !mscorlibOnly; } }
-            public bool DoTestTree { get { return (!mscorlibOnly && !frameworksOnly); } }
+            public bool DoFrameworks { get { return !_mscorlibOnly; } }
+            public bool DoTestTree { get { return (!_mscorlibOnly && !_frameworksOnly); } }
         }
 
-        private static string[] testDirectories =
+        private static string[] s_testDirectories =
         {
             "Interop",
             "JIT"
         };
 
-        private static string[] frameworkAssemblies =
+        private static string[] s_frameworkAssemblies =
         {
             "mscorlib.dll",
             "System.Runtime.dll",
@@ -161,8 +165,8 @@ namespace ManagedCodeGen
             // Create subjob that runs mcgdiff, which should be in path, with the 
             // relevent coreclr assemblies/paths.
 
-            string frameworkArgs = String.Join(" ", frameworkAssemblies);
-            string testArgs = String.Join(" ", testDirectories);
+            string frameworkArgs = String.Join(" ", s_frameworkAssemblies);
+            string testArgs = String.Join(" ", s_testDirectories);
 
 
             List<string> commandArgs = new List<string>();
@@ -201,7 +205,7 @@ namespace ManagedCodeGen
             else
             {
                 // Set up full framework paths
-                foreach (var assembly in frameworkAssemblies)
+                foreach (var assembly in s_frameworkAssemblies)
                 {
                     string coreRoot = config.CoreRoot;
                     string fullPathAssembly = Path.Combine(coreRoot, assembly);
@@ -217,7 +221,7 @@ namespace ManagedCodeGen
 
                 if (config.TestRoot != null)
                 {
-                    foreach (var dir in testDirectories)
+                    foreach (var dir in s_testDirectories)
                     {
                         string testRoot = config.TestRoot;
                         string fullPathDir = Path.Combine(testRoot, dir);
@@ -233,10 +237,10 @@ namespace ManagedCodeGen
                 }
             }
 
-            Console.WriteLine("Diff command: {0} {1}", asmTool, String.Join(" ", commandArgs));
+            Console.WriteLine("Diff command: {0} {1}", s_asmTool, String.Join(" ", commandArgs));
 
             Command diffCmd = Command.Create(
-                        asmTool,
+                        s_asmTool,
                         commandArgs);
 
             // Wireup stdout/stderr so we can see outout.
