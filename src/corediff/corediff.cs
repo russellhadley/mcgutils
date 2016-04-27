@@ -11,7 +11,7 @@ namespace ManagedCodeGen
     public class corediff
     {
         private static string asmTool = "mcgdiff";
-        
+
         public class Config
         {
             private ArgumentSyntax syntaxResult;
@@ -23,9 +23,9 @@ namespace ManagedCodeGen
             private string testPath = null;
             private bool mscorlibOnly = false;
             private bool frameworksOnly = false;
-            
-            public Config(string[] args) {
 
+            public Config(string[] args)
+            {
                 syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
                     syntax.DefineOption("b|base", ref baseExe, "The base compiler exe.");
@@ -37,31 +37,36 @@ namespace ManagedCodeGen
                     syntax.DefineOption("core_root", ref platformPath, "Path to test CORE_ROOT.");
                     syntax.DefineOption("test_root", ref testPath, "Path to test tree");
                 });
-                
+
                 // Run validation code on parsed input to ensure we have a sensible scenario.
-                
+
                 validate();
             }
-            
-            void validate() {
-                if (platformPath == null) {
+
+            private void validate()
+            {
+                if (platformPath == null)
+                {
                     syntaxResult.ReportError("Specifiy --core_root <path>");
                 }
-                
-                if ((mscorlibOnly == false) && 
-                    (frameworksOnly == false) && (testPath == null)) {
+
+                if ((mscorlibOnly == false) &&
+                    (frameworksOnly == false) && (testPath == null))
+                {
                     syntaxResult.ReportError("Specify --test_root <path>");
                 }
-                
-                if (outputPath == null) {
+
+                if (outputPath == null)
+                {
                     syntaxResult.ReportError("Specify --output <path>");
                 }
-                
-                if ((baseExe == null) && (diffExe == null)) {
+
+                if ((baseExe == null) && (diffExe == null))
+                {
                     syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
                 }
             }
-            
+
             public string CoreRoot { get { return platformPath; } }
             public string TestRoot { get { return testPath; } }
             public string PlatformPath { get { return platformPath; } }
@@ -78,31 +83,31 @@ namespace ManagedCodeGen
             public bool DoFrameworks { get { return !mscorlibOnly; } }
             public bool DoTestTree { get { return (!mscorlibOnly && !frameworksOnly); } }
         }
- 
-        private static string[] testDirectories = 
+
+        private static string[] testDirectories =
         {
             "Interop",
             "JIT"
         };
-        
-        private static string[] frameworkAssemblies = 
+
+        private static string[] frameworkAssemblies =
         {
-            "mscorlib.dll",			
-            "System.Runtime.dll",		
-            "System.Runtime.Extensions.dll",		
-            "System.Runtime.Handles.dll",		
-            "System.Runtime.InteropServices.dll",		
-            "System.Runtime.InteropServices.PInvoke.dll",		
+            "mscorlib.dll",
+            "System.Runtime.dll",
+            "System.Runtime.Extensions.dll",
+            "System.Runtime.Handles.dll",
+            "System.Runtime.InteropServices.dll",
+            "System.Runtime.InteropServices.PInvoke.dll",
             "System.Runtime.InteropServices.RuntimeInformation.dll",
-            "System.Runtime.Numerics.dll",			
-            "Microsoft.CodeAnalysis.dll",		
-            "Microsoft.CodeAnalysis.CSharp.dll",		
+            "System.Runtime.Numerics.dll",
+            "Microsoft.CodeAnalysis.dll",
+            "Microsoft.CodeAnalysis.CSharp.dll",
             "System.Collections.dll",
-            "System.Collections.Concurrent.dll",		
-            "System.Collections.Immutable.dll",		
-            "System.Collections.NonGeneric.dll",		
-            "System.Collections.Specialized.dll",		
-            "System.ComponentModel.dll",		
+            "System.Collections.Concurrent.dll",
+            "System.Collections.Immutable.dll",
+            "System.Collections.NonGeneric.dll",
+            "System.Collections.Specialized.dll",
+            "System.ComponentModel.dll",
             "System.Console.dll",
             "System.Dynamic.Runtime.dll",
             "System.IO.dll",
@@ -115,7 +120,7 @@ namespace ManagedCodeGen
             "System.Net.Primitives.dll",
             "System.Net.Requests.dll",
             "System.Net.Security.dll",
-            "System.Net.Sockets.dll",		
+            "System.Net.Sockets.dll",
             "System.Numerics.Vectors.dll",
             "System.Reflection.dll",
             "System.Reflection.DispatchProxy.dll",
@@ -126,114 +131,125 @@ namespace ManagedCodeGen
             "System.Reflection.Metadata.dll",
             "System.Reflection.Primitives.dll",
             "System.Reflection.TypeExtensions.dll",
-            "System.Text.Encoding.dll",		
-            "System.Text.Encoding.Extensions.dll",		
-            "System.Text.RegularExpressions.dll",		
-            "System.Xml.ReaderWriter.dll",		
-            "System.Xml.XDocument.dll",		
+            "System.Text.Encoding.dll",
+            "System.Text.Encoding.Extensions.dll",
+            "System.Text.RegularExpressions.dll",
+            "System.Xml.ReaderWriter.dll",
+            "System.Xml.XDocument.dll",
             "System.Xml.XmlDocument.dll"
         };
-        
+
         public static int Main(string[] args)
         {
             Config config = new Config(args);
             string diffString = "mscorlib.dll";
-            
-            if (config.DoFrameworks) {
+
+            if (config.DoFrameworks)
+            {
                 diffString += ", framework assemblies";
             }
-            
-            if (config.DoTestTree) {
+
+            if (config.DoTestTree)
+            {
                 diffString += ", " + config.TestRoot;
             }
-            
+
             Console.WriteLine("Beginning diff of {0}!", diffString);
-            
+
             // Add each framework assembly to commandArgs
-            
+
             // Create subjob that runs mcgdiff, which should be in path, with the 
             // relevent coreclr assemblies/paths.
-            
+
             string frameworkArgs = String.Join(" ", frameworkAssemblies);
             string testArgs = String.Join(" ", testDirectories);
-            
-            
+
+
             List<string> commandArgs = new List<string>();
-            
+
             // Set up CoreRoot
             commandArgs.Add("--platform");
             commandArgs.Add(config.CoreRoot);
-            
+
             commandArgs.Add("--output");
             commandArgs.Add(config.OutputPath);
-            
-            if (config.HasBaseExeutable) {
-                commandArgs.Add("--base");  
+
+            if (config.HasBaseExeutable)
+            {
+                commandArgs.Add("--base");
                 commandArgs.Add(config.BaseExecutable);
             }
-            
-            if (config.HasDiffExecutable) {
+
+            if (config.HasDiffExecutable)
+            {
                 commandArgs.Add("--diff");
                 commandArgs.Add(config.DiffExecutable);
             }
-            
-            if (config.HasTag) {
+
+            if (config.HasTag)
+            {
                 commandArgs.Add("--tag");
                 commandArgs.Add(config.Tag);
             }
 
-            if (config.MSCorelibOnly) {
+            if (config.MSCorelibOnly)
+            {
                 string coreRoot = config.CoreRoot;
                 string fullPathAssembly = Path.Combine(coreRoot, "mscorlib.dll");
                 commandArgs.Add(fullPathAssembly);
             }
-            else {
+            else
+            {
                 // Set up full framework paths
-                foreach (var assembly in frameworkAssemblies) {
+                foreach (var assembly in frameworkAssemblies)
+                {
                     string coreRoot = config.CoreRoot;
                     string fullPathAssembly = Path.Combine(coreRoot, assembly);
-                    
-                    if (!File.Exists(fullPathAssembly)) {
+
+                    if (!File.Exists(fullPathAssembly))
+                    {
                         Console.WriteLine("can't find {0}", fullPathAssembly);
                         continue;
                     }
-                    
+
                     commandArgs.Add(fullPathAssembly);
                 }
 
-                if (config.TestRoot != null) {
-                    foreach (var dir in testDirectories) {
+                if (config.TestRoot != null)
+                {
+                    foreach (var dir in testDirectories)
+                    {
                         string testRoot = config.TestRoot;
                         string fullPathDir = Path.Combine(testRoot, dir);
-                        
-                        if (!Directory.Exists(fullPathDir)) {
+
+                        if (!Directory.Exists(fullPathDir))
+                        {
                             Console.WriteLine("can't find {0}", fullPathDir);
                             continue;
                         }
-                        
+
                         commandArgs.Add(fullPathDir);
-                        // Set up resursive search
-                        commandArgs.Add("--recursive");
-                    } 
+                    }
                 }
             }
-            
+
             Console.WriteLine("Diff command: {0} {1}", asmTool, String.Join(" ", commandArgs));
-            
+
             Command diffCmd = Command.Create(
-                        asmTool, 
+                        asmTool,
                         commandArgs);
-                        
+
             // Wireup stdout/stderr so we can see outout.
             diffCmd.ForwardStdOut();
             diffCmd.ForwardStdErr();
-            
+
             CommandResult result = diffCmd.Execute();
-            
-            if (result.ExitCode != 0) {
+
+            if (result.ExitCode != 0)
+            {
                 Console.WriteLine("Returned with {0} failures", result.ExitCode);
             }
-            
+
             return result.ExitCode;
         }
     }
