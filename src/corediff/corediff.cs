@@ -22,6 +22,7 @@ namespace ManagedCodeGen
             private string _baseExe = null;
             private string _diffExe = null;
             private string _outputPath = null;
+            private string _list = false;
             private string _tag = null;
             private string _platformPath = null;
             private string _testPath = null;
@@ -36,6 +37,7 @@ namespace ManagedCodeGen
                     syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe.");
                     syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe.");
                     syntax.DefineOption("o|output", ref _outputPath, "The output path.");
+                    syntax.DefineOptions("l|list", ref _list, "List available tools (Set JIT_DASM_ROOT).");
                     syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
                     syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
@@ -54,6 +56,7 @@ namespace ManagedCodeGen
                 if (_platformPath == null)
                 {
                     _syntaxResult.ReportError("Specifiy --core_root <path>");
+
                 }
 
                 if ((_mscorlibOnly == false) &&
@@ -72,7 +75,65 @@ namespace ManagedCodeGen
                     _syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
                 }
             }
+            
+            void Configure ()
+            {
+                string jitDasmRoot = Environment.GetEnvironmentVariable("JIT_DASM_ROOT");
+                
+                if (jitDasmRoot != null) {
+                    if (list) {
+                        List();
+                    }
+                    else {
+                        string baseToolPath = FindTool(baseExe);
+                        string diffToolPath = FindTool(diffExe);
+                        
+                        if (baseToolPath != null) {
+                            baseExe = baseToolPath;
+                        }
+                        
+                        if (diffToolPath != null) {
+                            diffExe = diffToolPath;
+                        }
+                    }
+                }
+                else {
+                    if (list) {
+                        Console.WriteLine("Can't list, missing JIT_DASM_ROOT in the environment.");
+                    }
+                }
+            }
+            
+            string FindTool(string tool) {
+                
+                if (tool == null) {
+                    return null;
+                }
+                
+                // Found JIT_DASM_ROOT, list the available tool sets. 
+                IEnumerate<string> files = Directory.EnumerateFiles(jitDasmRoot, "*Tools");
 
+                foreach (file in files) {
+                    string name = Path.GetFileName(file);
+                    if (Regex.IsMatch(name, tool)) {
+                        // Set path to file.
+                        return file;
+                    }
+                }
+                return null;
+            }
+            
+            // List available tools
+            void List() {                 
+                // Found JIT_DASM_ROOT, list the available tool sets.
+                IEnumerate<string> files = Directory.EnumerateFiles(jitDasmRoot, "*Tools");
+                    
+                Console.WriteLine("Available tools:");
+                foreach (file in files) {
+                    Console.WriteLine("    {0}", file);
+                }
+            }
+            
             public string CoreRoot { get { return _platformPath; } }
             public string TestRoot { get { return _testPath; } }
             public string PlatformPath { get { return _platformPath; } }
