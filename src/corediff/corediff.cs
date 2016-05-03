@@ -7,14 +7,19 @@ using System.Diagnostics;
 using System.CommandLine;
 using System.IO;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Linq;
 using Microsoft.DotNet.Cli.Utils;
 using Microsoft.DotNet.Tools.Common;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ManagedCodeGen
 {
     public class corediff
     {
         private static string s_asmTool = "mcgdiff";
+        private static string s_analysisTool = "analyze";
 
         public class Config
         {
@@ -22,7 +27,8 @@ namespace ManagedCodeGen
             private string _baseExe = null;
             private string _diffExe = null;
             private string _outputPath = null;
-            private string _list = false;
+            private bool _list = false;
+            private bool _analyze = false;
             private string _tag = null;
             private string _platformPath = null;
             private string _testPath = null;
@@ -32,12 +38,17 @@ namespace ManagedCodeGen
 
             public Config(string[] args)
             {
+                // Get configuration values from JIT_DASM_ROOT/asmdiff.json
+                
+                LoadFileConfig();
+                
                 _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
                     syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe.");
                     syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe.");
                     syntax.DefineOption("o|output", ref _outputPath, "The output path.");
-                    syntax.DefineOptions("l|list", ref _list, "List available tools (Set JIT_DASM_ROOT).");
+                    syntax.DefineOption("l|list", ref _list, "List available tools (Set JIT_DASM_ROOT).");
+                    syntax.DefineOption("a|analyze", ref _analyze, "Analyze resulting base, diff dasm directories.");
                     syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
                     syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
@@ -48,15 +59,14 @@ namespace ManagedCodeGen
 
                 // Run validation code on parsed input to ensure we have a sensible scenario.
 
-                validate();
+                Validate();
             }
 
-            private void validate()
+            private void Validate()
             {
                 if (_platformPath == null)
                 {
                     _syntaxResult.ReportError("Specifiy --core_root <path>");
-
                 }
 
                 if ((_mscorlibOnly == false) &&
@@ -76,61 +86,109 @@ namespace ManagedCodeGen
                 }
             }
             
-            void Configure ()
+            public string GetToolPath(JObject jObj, string tool, out bool found)
             {
-                string jitDasmRoot = Environment.GetEnvironmentVariable("JIT_DASM_ROOT");
+                var token = jObj["default"][tool];
                 
-                if (jitDasmRoot != null) {
-                    if (list) {
-                        List();
+                if (token != null)
+                {
+                    found = true;
+                    
+                    string tag = jObj["default"][tool].Value<string>();
+                    var path = jObj["tools"].Children()
+                                        .Where(x => (string)x["tag"] == tag)
+                                        .Select(x => (string)x["path"]);
+                    if (!path.Any()) {
+                        Console.WriteLine("Config error: can't find tool tag: \"{0}\" specified in default", tool);
                     }
-                    else {
-                        string baseToolPath = FindTool(baseExe);
-                        string diffToolPath = FindTool(diffExe);
-                        
-                        if (baseToolPath != null) {
-                            baseExe = baseToolPath;
-                        }
-                        
-                        if (diffToolPath != null) {
-                            diffExe = diffToolPath;
-                        }
-                    }
-                }
-                else {
-                    if (list) {
-                        Console.WriteLine("Can't list, missing JIT_DASM_ROOT in the environment.");
-                    }
-                }
-            }
-            
-            string FindTool(string tool) {
-                
-                if (tool == null) {
-                    return null;
+                    
+                    return path.Any() ? path.First() : null;
                 }
                 
-                // Found JIT_DASM_ROOT, list the available tool sets. 
-                IEnumerate<string> files = Directory.EnumerateFiles(jitDasmRoot, "*Tools");
-
-                foreach (file in files) {
-                    string name = Path.GetFileName(file);
-                    if (Regex.IsMatch(name, tool)) {
-                        // Set path to file.
-                        return file;
-                    }
-                }
+                found = false;
                 return null;
             }
             
-            // List available tools
-            void List() {                 
-                // Found JIT_DASM_ROOT, list the available tool sets.
-                IEnumerate<string> files = Directory.EnumerateFiles(jitDasmRoot, "*Tools");
-                    
-                Console.WriteLine("Available tools:");
-                foreach (file in files) {
-                    Console.WriteLine("    {0}", file);
+            public T ExtractDefault<T>(JObject jObj, string name, out bool found) {
+                var token = jObj["default"][name];
+                
+                if (token != null)
+                {
+                    found = true;
+
+                    try 
+                    {
+                        return token.Value<T>();   
+                    }
+                    catch (System.FormatException e)
+                    {
+                        Console.WriteLine("Bad format for default {0}.  See asmdiff.json", name, e);
+                    }
+                }
+                
+                found = false;
+                return default (T);        
+            }
+            
+            void LoadFileConfig ()
+            {
+                string jitDasmRoot = Environment.GetEnvironmentVariable("JIT_DASM_ROOT");
+
+                if (jitDasmRoot != null) 
+                {
+                    string path = Path.Combine(jitDasmRoot, "asmdiff.json");
+
+                    if (File.Exists(path))
+                    {
+                        string configJson = File.ReadAllText(path);
+                        
+                        JObject jObj = JObject.Parse(configJson);
+                        
+                        // Check if there is any default config specified.
+                        if (jObj["default"] != null) 
+                        {
+                            bool found;
+                            
+                            // Find baseline tool if any.
+                            string basePath = GetToolPath(jObj, "base", out found);
+                            if (found) 
+                            {
+                                _baseExe = Path.Combine(basePath, "crossgen");
+                                Console.WriteLine("Using base tool {0} from asmdiff.json", _baseExe);
+                            }
+                            
+                            // Find diff tool if any
+                            string diffPath = GetToolPath(jObj, "diff", out found);
+                            if (found)
+                            {
+                                _diffExe = Path.Combine(diffPath, "crossgen");
+                                Console.WriteLine("Using diff tool {0} from asmdiff.json", _diffExe);
+                            }
+                            
+                            // Set up output
+                            var outputPath = ExtractDefault<string>(jObj, "output", out found);
+                            _outputPath = (found) ? outputPath : _outputPath;
+                            
+                            // Setup platform path (core_root).
+                            var platformPath = ExtractDefault<string>(jObj, "core_root", out found);
+                            _platformPath = (found) ? platformPath : _platformPath;
+                            
+                            // Set up test path (test_root).
+                            var testPath = ExtractDefault<string>(jObj, "test_root", out found);
+                            _testPath = (found) ? testPath : _testPath;
+                            
+                            var analyze = ExtractDefault<bool>(jObj, "analyze", out found);
+                            _analyze = (found) ? analyze : _analyze;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Can't find asmdiff.json on {0}", jitDasmRoot);
+                    }
+                }
+                else 
+                {
+                       Console.WriteLine("No default asmdiff configuration found.");
                 }
             }
             
@@ -150,6 +208,7 @@ namespace ManagedCodeGen
             public bool DoFrameworks { get { return !_mscorlibOnly; } }
             public bool DoTestTree { get { return (!_mscorlibOnly && !_frameworksOnly); } }
             public bool Verbose { get { return _verbose; } }
+            public bool DoAnalyze { get { return _analyze; } }
         }
 
         private static string[] s_testDirectories =
@@ -325,9 +384,33 @@ namespace ManagedCodeGen
 
             if (result.ExitCode != 0)
             {
-                Console.WriteLine("Returned with {0} failures", result.ExitCode);
+                Console.WriteLine("Dasm command returned with {0} failures", result.ExitCode);
             }
 
+            // Analyze completed run.
+            
+            if (config.DoAnalyze == true) 
+            {
+                List<string> analysisArgs = new List<string>();
+            
+                analysisArgs.Add("--base");
+                analysisArgs.Add(Path.Combine(config.OutputPath, "base"));
+                analysisArgs.Add("--diff");
+                analysisArgs.Add(Path.Combine(config.OutputPath, "diff"));
+                analysisArgs.Add("--recursive"); 
+                
+                Console.WriteLine("Analyze command: {0} {1}", 
+                    s_analysisTool, String.Join(" ", analysisArgs));
+                
+                Command analyzeCmd = Command.Create(s_analysisTool, analysisArgs);
+
+                // Wireup stdout/stderr so we can see outout.
+                analyzeCmd.ForwardStdOut();
+                analyzeCmd.ForwardStdErr();
+
+                CommandResult analyzeResult = analyzeCmd.Execute();
+            }
+            
             return result.ExitCode;
         }
     }
