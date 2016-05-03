@@ -27,6 +27,7 @@ namespace ManagedCodeGen
             private string _testPath = null;
             private bool _mscorlibOnly = false;
             private bool _frameworksOnly = false;
+            private bool _verbose = false;
 
             public Config(string[] args)
             {
@@ -38,6 +39,7 @@ namespace ManagedCodeGen
                     syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
                     syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
+                    syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
                     syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
                     syntax.DefineOption("test_root", ref _testPath, "Path to test tree");
                 });
@@ -86,6 +88,7 @@ namespace ManagedCodeGen
             public bool DoMSCorelib { get { return true; } }
             public bool DoFrameworks { get { return !_mscorlibOnly; } }
             public bool DoTestTree { get { return (!_mscorlibOnly && !_frameworksOnly); } }
+            public bool Verbose { get { return _verbose; } }
         }
 
         private static string[] s_testDirectories =
@@ -196,6 +199,16 @@ namespace ManagedCodeGen
                 commandArgs.Add(config.Tag);
             }
 
+            if (config.DoTestTree)
+            {
+                commandArgs.Add("--recursive");
+            }
+
+            if (config.Verbose)
+            {
+                commandArgs.Add("--verbose");
+            }
+
             if (config.MSCorelibOnly)
             {
                 string coreRoot = config.CoreRoot;
@@ -212,7 +225,7 @@ namespace ManagedCodeGen
 
                     if (!File.Exists(fullPathAssembly))
                     {
-                        Console.WriteLine("can't find {0}", fullPathAssembly);
+                        Console.WriteLine("can't find framework assembly {0}", fullPathAssembly);
                         continue;
                     }
 
@@ -228,7 +241,7 @@ namespace ManagedCodeGen
 
                         if (!Directory.Exists(fullPathDir))
                         {
-                            Console.WriteLine("can't find {0}", fullPathDir);
+                            Console.WriteLine("can't find test directory {0}", fullPathDir);
                             continue;
                         }
 

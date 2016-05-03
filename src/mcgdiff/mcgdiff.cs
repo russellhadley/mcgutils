@@ -301,13 +301,13 @@ namespace ManagedCodeGen
             {
                 FileAttributes attr;
 
-                if (File.Exists(path))
+                if (File.Exists(path) || Directory.Exists(path))
                 {
                     attr = File.GetAttributes(path);
                 }
                 else
                 {
-                    Console.WriteLine("Can't find assembly {0}", path);
+                    Console.WriteLine("Can't find assembly or directory at {0}", path);
                     continue;
                 }
 
@@ -470,6 +470,20 @@ namespace ManagedCodeGen
                     Command generateCmd = Command.Create(
                         _executablePath,
                         commandArgs);
+
+                    // Pick up ambient COMPlus settings.
+                    foreach (string envVar in Environment.GetEnvironmentVariables().Keys)
+                    {
+                        if (envVar.IndexOf("COMPlus_") == 0)
+                        {
+                            string value = Environment.GetEnvironmentVariable(envVar);
+                            if (this.verbose)
+                            {
+                                Console.WriteLine("Incorporating ambient setting: {0}={1}", envVar, value);
+                            }
+                            generateCmd.EnvironmentVariable(envVar, value);
+                        }
+                    }
 
                     // Set up environment do disasm.
                     generateCmd.EnvironmentVariable("COMPlus_NgenDisasm", "*");
