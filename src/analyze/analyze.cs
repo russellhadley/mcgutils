@@ -28,6 +28,7 @@ namespace ManagedCodeGen
             private int _count = 5;
             private string _json;
             private string _tsv;
+            private bool _reconcile = false;
 
             public Config(string[] args)
             {
@@ -43,6 +44,9 @@ namespace ManagedCodeGen
                     syntax.DefineOption("w|warn", ref _warn,
                         "Generate warning output for files/methods that only "
                       + "exists in one dataset or the other (only in base or only in diff).");
+                    syntax.DefineOption("reconcile", ref _reconcile,
+                        "If there are methods that exist only in base or diff, create zero-sized "
+                      + "counterparts in diff, and vice-versa. Update size deltas accordingly.");
                     syntax.DefineOption("json", ref _json,
                         "Dump analysis data to specified file in JSON format.");
                     syntax.DefineOption("tsv", ref _tsv, 
@@ -76,6 +80,7 @@ namespace ManagedCodeGen
             public string JsonFileName { get { return _json; } }
             public bool DoGenerateJson { get { return _json != null; } }
             public bool DoGenerateTSV { get { return _tsv != null; } }
+            public bool Reconcile {  get { return _reconcile; } }
         }
 
         public class FileInfo
@@ -146,9 +151,38 @@ namespace ManagedCodeGen
         {
             public string path;
             public int deltaBytes;
+            public int reconciledBytesBase;
+            public int reconciledCountBase;
+            public int reconciledBytesDiff;
+            public int reconciledCountDiff;
             public IEnumerable<MethodInfo> methodsOnlyInBase;
             public IEnumerable<MethodInfo> methodsOnlyInDiff;
             public IEnumerable<MethodDelta> methodDeltaList;
+            // Adjust lists to include empty methods in diff|base for methods that appear only in base|diff.
+            // Also adjust delta to take these methods into account.
+            public void Reconcile()
+            {
+                List<MethodDelta> reconciles = new List<MethodDelta>();
+
+                foreach (MethodInfo m in methodsOnlyInBase)
+                {
+                    reconciles.Add(new MethodDelta { name = m.name, baseBytes = m.totalBytes, diffBytes = 0,
+                        baseOffsets = m.functionOffsets, diffOffsets = null });
+                    reconciledBytesBase += m.totalBytes;
+                    reconciledCountBase++;
+                }
+
+                foreach (MethodInfo m in methodsOnlyInDiff)
+                {
+                    reconciles.Add(new MethodDelta { name = m.name, baseBytes = 0, diffBytes = m.totalBytes,
+                        baseOffsets = null, diffOffsets = m.functionOffsets });
+                    reconciledBytesDiff += m.totalBytes;
+                    reconciledCountDiff++;
+                }
+
+                methodDeltaList = methodDeltaList.Concat(reconciles);
+                deltaBytes = deltaBytes + reconciledBytesDiff - reconciledBytesBase;
+            }
         }
 
         public class MethodDelta
@@ -237,7 +271,7 @@ namespace ManagedCodeGen
         // deltas by file.  Delta is computed diffBytes - baseBytes so positive
         // numbers are regressions. (lower is better)       
         public static IEnumerable<FileDelta> Comparator(IEnumerable<FileInfo> baseInfo,
-            IEnumerable<FileInfo> diffInfo)
+            IEnumerable<FileInfo> diffInfo, Config config)
         {
             MethodInfoComparer methodInfoComparer = new MethodInfoComparer();
             return baseInfo.Join(diffInfo, b => b.path, d => d.path, (b, d) =>
@@ -253,7 +287,8 @@ namespace ManagedCodeGen
                         })
                         .Where(r => r.deltaBytes != 0)
                         .OrderByDescending(r => r.deltaBytes);
-                return new FileDelta
+
+                FileDelta f = new FileDelta
                 {
                     path = b.path,
                     deltaBytes = deltaList.Sum(x => x.deltaBytes),
@@ -261,6 +296,13 @@ namespace ManagedCodeGen
                     methodsOnlyInDiff = d.methodList.Except(b.methodList, methodInfoComparer),
                     methodDeltaList = deltaList
                 };
+
+                if (config.Reconcile)
+                {
+                    f.Reconcile();
+                }
+
+                return f;
             });
         }
 
@@ -271,11 +313,13 @@ namespace ManagedCodeGen
         //     Top 5 diffs by size across all files
         //
         //
-        public static int Summarize(IEnumerable<FileDelta> fileDeltaList, int requestedCount)
+        public static int Summarize(IEnumerable<FileDelta> fileDeltaList, Config config)
         {
             var totalBytes = fileDeltaList.Sum(x => x.deltaBytes);
+
             Console.WriteLine("\nSummary:\n(Note: Lower is better)\n");
-            Console.WriteLine("Total bytes of diff: {0}", totalBytes.ToString());
+            Console.WriteLine("Total bytes of diff: {0}", totalBytes);
+
             if (totalBytes != 0)
             {
                 Console.WriteLine("    diff is {0}", totalBytes < 0 ? "an improvement." : "a regression.");
@@ -286,6 +330,18 @@ namespace ManagedCodeGen
                 return totalBytes;
             }
 
+            if (config.Reconcile)
+            {
+                var reconciledBytesBase = fileDeltaList.Sum(x => x.reconciledBytesBase);
+                var reconciledBytesDiff = fileDeltaList.Sum(x => x.reconciledBytesDiff);
+                var uniqueToBase = fileDeltaList.Sum(x => x.reconciledCountBase);
+                var uniqueToDiff = fileDeltaList.Sum(x => x.reconciledCountDiff);
+                Console.WriteLine("\nTotal byte diff includes {0} bytes from reconciling methods", reconciledBytesDiff - reconciledBytesBase);
+                Console.WriteLine("\tBase had {0,4} unique methods, {1,8} unique bytes", uniqueToBase, reconciledBytesBase);
+                Console.WriteLine("\tDiff had {0,4} unique methods, {1,8} unique bytes", uniqueToDiff, reconciledBytesDiff);
+            }
+
+            int requestedCount = config.Count;
             var sortedFileDelta = fileDeltaList
                                       .Where(x => x.deltaBytes != 0)
                                       .OrderByDescending(d => d.deltaBytes).ToList();
@@ -298,7 +354,7 @@ namespace ManagedCodeGen
                 foreach (var fileDelta in sortedFileDelta.GetRange(0, fileCount)
                                                          .Where(x => x.deltaBytes > 0))
                 {
-                    Console.WriteLine("    {1} : {0}", fileDelta.path, fileDelta.deltaBytes);
+                    Console.WriteLine("    {1,8} : {0}", fileDelta.path, fileDelta.deltaBytes);
                 }
             }
 
@@ -312,7 +368,7 @@ namespace ManagedCodeGen
                                                         .Where(x => x.deltaBytes < 0)
                                                         .OrderBy(x => x.deltaBytes))
                 {
-                    Console.WriteLine("    {1} : {0}", fileDelta.path, fileDelta.deltaBytes);
+                    Console.WriteLine("    {1,8} : {0}", fileDelta.path, fileDelta.deltaBytes);
                 }
             }
 
@@ -335,7 +391,7 @@ namespace ManagedCodeGen
                 foreach (var method in sortedMethodDelta.GetRange(0, methodCount)
                                                         .Where(x => x.deltaBytes > 0))
                 {
-                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.deltaBytes);
+                    Console.WriteLine("    {2,8} : {0} - {1}", method.path, method.name, method.deltaBytes);
                 }
             }
 
@@ -349,7 +405,7 @@ namespace ManagedCodeGen
                                                         .Where(x => x.deltaBytes < 0)
                                                         .OrderBy(x => x.deltaBytes))
                 {
-                    Console.WriteLine("    {2} : {0} - {1}", method.path, method.name, method.deltaBytes);
+                    Console.WriteLine("    {2,8} : {0} - {1}", method.path, method.name, method.deltaBytes);
                 }
             }
 
@@ -518,7 +574,7 @@ namespace ManagedCodeGen
             // the other are used as the comparator function only compares where it 
             // has both sides.
 
-            var compareList = Comparator(baseList, diffList);
+            var compareList = Comparator(baseList, diffList, config);
 
             // Generate warning lists if requested.
             if (config.Warn)
@@ -537,7 +593,7 @@ namespace ManagedCodeGen
                 GenerateJson(compareList, config.JsonFileName);
             }
 
-            return Summarize(compareList, config.Count);
+            return Summarize(compareList, config);
         }
     }
 }
