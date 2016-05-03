@@ -27,7 +27,7 @@ namespace ManagedCodeGen
             private bool _warn = false;
             private int _count = 5;
             private string _json;
-            private string _csv;
+            private string _tsv;
 
             public Config(string[] args)
             {
@@ -45,7 +45,8 @@ namespace ManagedCodeGen
                       + "exists in one dataset or the other (only in base or only in diff).");
                     syntax.DefineOption("json", ref _json,
                         "Dump analysis data to specified file in JSON format.");
-                    syntax.DefineOption("csv", ref _csv, "Dump analysis data to specified file in CSV format.");
+                    syntax.DefineOption("tsv", ref _tsv, 
+                        "Dump analysis data to specified file in tab-separated format.");
                 });
 
                 // Run validation code on parsed input to ensure we have a sensible scenario.
@@ -71,10 +72,10 @@ namespace ManagedCodeGen
             public bool Full { get { return _full; } }
             public bool Warn { get { return _warn; } }
             public int Count { get { return _count; } }
-            public string CSVFileName { get { return _csv; } }
+            public string TSVFileName { get { return _tsv; } }
             public string JsonFileName { get { return _json; } }
             public bool DoGenerateJson { get { return _json != null; } }
-            public bool DoGenerateCSV { get { return _csv != null; } }
+            public bool DoGenerateTSV { get { return _tsv != null; } }
         }
 
         public class FileInfo
@@ -447,24 +448,22 @@ namespace ManagedCodeGen
             }
         }
 
-        public static void GenerateCSV(IEnumerable<FileDelta> compareList, string path)
+        public static void GenerateTSV(IEnumerable<FileDelta> compareList, string path)
         {
+            string schema = "{0}\t{1}\t{2}\t{3}\t{4}";
             using (var outputStream = System.IO.File.Create(path))
             {
                 using (var outputStreamWriter = new StreamWriter(outputStream))
                 {
-                    outputStreamWriter.WriteLine("File, Method, Diff bytes, Base bytes");
+                    outputStreamWriter.WriteLine(schema, "File", "Method", "DiffBytes",
+                        "BaseBytes", "DeltaBytes");
                     foreach (var file in compareList)
                     {
-                        if (file.deltaBytes == 0)
-                        {
-                            // Early out if there are no diff bytes.
-                            continue;
-                        }
-
                         foreach (var method in file.methodDeltaList)
                         {
-                            outputStreamWriter.WriteLine("{0}, {1}, {2}, {3}", file.path, method.name, method.diffBytes, method.baseBytes);
+                            // Method names often contain commas, so use tabs as field separators
+                            outputStreamWriter.WriteLine(schema, file.path, method.name, method.diffBytes,
+                                method.baseBytes, method.deltaBytes);
                         }
                     }
                 }
@@ -528,9 +527,9 @@ namespace ManagedCodeGen
                 WarnMethods(compareList);
             }
 
-            if (config.DoGenerateCSV)
+            if (config.DoGenerateTSV)
             {
-                GenerateCSV(compareList, config.CSVFileName);
+                GenerateTSV(compareList, config.TSVFileName);
             }
 
             if (config.DoGenerateJson)
