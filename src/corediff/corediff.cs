@@ -36,6 +36,8 @@ namespace ManagedCodeGen
             private bool _frameworksOnly = false;
             private bool _verbose = false;
 
+            private JObject jObj;
+
             public Config(string[] args)
             {
                 // Get configuration values from JIT_DASM_ROOT/asmdiff.json
@@ -44,8 +46,8 @@ namespace ManagedCodeGen
                 
                 _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
-                    syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe.");
-                    syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe.");
+                    syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe or tag.");
+                    syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe or tag.");
                     syntax.DefineOption("o|output", ref _outputPath, "The output path.");
                     syntax.DefineOption("l|list", ref _list, "List available tools (Set JIT_DASM_ROOT).");
                     syntax.DefineOption("a|analyze", ref _analyze, "Analyze resulting base, diff dasm directories.");
@@ -60,6 +62,63 @@ namespace ManagedCodeGen
                 // Run validation code on parsed input to ensure we have a sensible scenario.
 
                 Validate();
+                
+                ExpandToolTags();
+                
+                DeriveOutputTag();
+                
+                // Now that output path and tag are guaranteed to be set, update
+                // the output path to included the tag.
+                _outputPath = Path.Combine(_outputPath, _tag);   
+            }
+
+            private void DeriveOutputTag()
+            {
+                if (_tag == null)
+                {
+                    int currentCount = 1;
+                    foreach (var dir in Directory.EnumerateDirectories(_outputPath))
+                    {
+                        var name = Path.GetFileName(dir);
+                        Regex pattern = new Regex(@"dasmset_([0-9]{1,})");
+                        Match match = pattern.Match(name);
+                        if (match.Success)
+                        {
+                            int count = Convert.ToInt32(match.Groups[1].Value);
+                            if (count > currentCount)
+                            {
+                                currentCount = count;
+                            }
+                        }
+                    }
+                    
+                    currentCount++;
+                    _tag = String.Format("dasmset_{0}", currentCount);
+                    Console.WriteLine("tag {0}", _tag);
+                }
+            }
+
+            private void ExpandToolTags()
+            {
+                var tools = jObj["tools"];
+                
+                foreach (var tool in tools)
+                {
+                    var tag = (string)tool["tag"];
+                    var path = (string)tool["path"];
+
+                    if (_baseExe == tag) 
+                    {
+                        // passed base tag matches installed tool, reset path.
+                        _baseExe = Path.Combine(path, "crossgen");
+                    } 
+
+                    if (_diffExe == tag)
+                    {
+                        // passed diff tag matches installed tool, reset path.
+                        _diffExe = Path.Combine(path, "crossgen");
+                    }
+                }    
             }
 
             private void Validate()
@@ -86,7 +145,7 @@ namespace ManagedCodeGen
                 }
             }
             
-            public string GetToolPath(JObject jObj, string tool, out bool found)
+            public string GetToolPath(string tool, out bool found)
             {
                 var token = jObj["default"][tool];
                 
@@ -109,7 +168,7 @@ namespace ManagedCodeGen
                 return null;
             }
             
-            public T ExtractDefault<T>(JObject jObj, string name, out bool found) {
+            public T ExtractDefault<T>(string name, out bool found) {
                 var token = jObj["default"][name];
                 
                 if (token != null)
@@ -142,7 +201,7 @@ namespace ManagedCodeGen
                     {
                         string configJson = File.ReadAllText(path);
                         
-                        JObject jObj = JObject.Parse(configJson);
+                        jObj = JObject.Parse(configJson);
                         
                         // Check if there is any default config specified.
                         if (jObj["default"] != null) 
@@ -150,34 +209,32 @@ namespace ManagedCodeGen
                             bool found;
                             
                             // Find baseline tool if any.
-                            string basePath = GetToolPath(jObj, "base", out found);
+                            string basePath = GetToolPath("base", out found);
                             if (found) 
                             {
                                 _baseExe = Path.Combine(basePath, "crossgen");
-                                Console.WriteLine("Using base tool {0} from asmdiff.json", _baseExe);
                             }
                             
                             // Find diff tool if any
-                            string diffPath = GetToolPath(jObj, "diff", out found);
+                            string diffPath = GetToolPath("diff", out found);
                             if (found)
                             {
                                 _diffExe = Path.Combine(diffPath, "crossgen");
-                                Console.WriteLine("Using diff tool {0} from asmdiff.json", _diffExe);
                             }
                             
                             // Set up output
-                            var outputPath = ExtractDefault<string>(jObj, "output", out found);
+                            var outputPath = ExtractDefault<string>("output", out found);
                             _outputPath = (found) ? outputPath : _outputPath;
                             
                             // Setup platform path (core_root).
-                            var platformPath = ExtractDefault<string>(jObj, "core_root", out found);
+                            var platformPath = ExtractDefault<string>("core_root", out found);
                             _platformPath = (found) ? platformPath : _platformPath;
                             
                             // Set up test path (test_root).
-                            var testPath = ExtractDefault<string>(jObj, "test_root", out found);
+                            var testPath = ExtractDefault<string>("test_root", out found);
                             _testPath = (found) ? testPath : _testPath;
                             
-                            var analyze = ExtractDefault<bool>(jObj, "analyze", out found);
+                            var analyze = ExtractDefault<bool>("analyze", out found);
                             _analyze = (found) ? analyze : _analyze;
                         }
                     }
@@ -311,12 +368,6 @@ namespace ManagedCodeGen
             {
                 commandArgs.Add("--diff");
                 commandArgs.Add(config.DiffExecutable);
-            }
-
-            if (config.HasTag)
-            {
-                commandArgs.Add("--tag");
-                commandArgs.Add(config.Tag);
             }
 
             if (config.DoTestTree)
