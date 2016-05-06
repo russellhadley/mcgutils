@@ -48,12 +48,11 @@ namespace ManagedCodeGen
             private ListOption _listOption = ListOption.Invalid;
             private string _jobName;
             private string _forkUrl;
-            private int _number;
+            private int _number = 0;
             private string _matchPattern = String.Empty;
             private string _coreclrBranchName = "master";
             private string _privateBranchName;
             private bool _lastSuccessful = true;
-            private bool _install = false;
             private bool _unzip = false;
             private string _outputPath;
 
@@ -66,15 +65,21 @@ namespace ManagedCodeGen
                     // before changing.
                     syntax.DefineCommand("list", ref _command, Command.List, "List jobs on the CI system.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
-                    syntax.DefineOption("b|branch", ref _coreclrBranchName, "Name of the branch (dotnet/coreclr).");
-                    syntax.DefineOption("m|match", ref _matchPattern, "Regex pattern used to select job output.");
+                    syntax.DefineOption("b|branch", ref _coreclrBranchName, 
+                        "Name of the branch (dotnet/coreclr, def. is master).");
+                    syntax.DefineOption("m|match", ref _matchPattern, 
+                        "Regex pattern used to select jobs output.");
                     syntax.DefineOption("n|number", ref _number, "Job number.");
-                    syntax.DefineOption("l|last_successful", ref _lastSuccessful, "List last successfull build");
+                    syntax.DefineOption("l|last_successful", ref _lastSuccessful, 
+                        "List last successful build.");
 
                     syntax.DefineCommand("copy", ref _command, Command.Copy, "Start a job on the CI system.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
                     syntax.DefineOption("n|number", ref _number, "Job number.");
-                    syntax.DefineOption("b|branch", ref _coreclrBranchName, "Name of branch.");
+                    syntax.DefineOption("l|last_successful", ref _lastSuccessful, 
+                        "Copy last successful build.");
+                    syntax.DefineOption("b|branch", ref _coreclrBranchName, 
+                        "Name of branch  (dotnet/coreclr, def. is master)..");
                     syntax.DefineOption("o|output", ref _outputPath, "Output path.");
                     syntax.DefineOption("u|unzip", ref _unzip, "Unzip copied artifacts");
                 });
@@ -102,7 +107,20 @@ namespace ManagedCodeGen
 
             private void validateCopy()
             {
-                ;
+                if (_jobName == null) 
+                {
+                    _syntaxResult.ReportError("Must have --job <name> for copy.");
+                }
+                
+                if (_number == 0 && !_lastSuccessful)
+                {
+                    _syntaxResult.ReportError("Must have --number <num> or --last_successful for copy.");
+                }
+                
+                if (_outputPath == null)
+                {
+                    _syntaxResult.ReportError("Must have --output <path> for copy.");
+                }
             }
 
             private void validateList()
@@ -125,7 +143,7 @@ namespace ManagedCodeGen
             public Command DoCommand { get { return _command; } }
             public ListOption DoListOption { get { return _listOption; } }
             public string JobName { get { return _jobName; } }
-            public int Number { get { return _number; } }
+            public int Number { get { return _number; } set { this._number = value; } }
             public string MatchPattern { get { return _matchPattern; } }
             public string CoreclrBranchName { get { return _coreclrBranchName; } }
             public bool LastSuccessful { get { return _lastSuccessful; } }
@@ -278,7 +296,7 @@ namespace ManagedCodeGen
             }
 
             public async Task<IEnumerable<Build>> GetJobBuilds(string productName, string branchName, 
-                string jobName)
+                string jobName, bool lastSuccessfulBuild = false)
             {
                 var jobString
                     = String.Format(@"job/dotnet_coreclr/job/master/job/{0}", jobName);
@@ -291,18 +309,29 @@ namespace ManagedCodeGen
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     var jobBuilds = JsonConvert.DeserializeObject<JobBuilds>(json);
-                    var builds = jobBuilds.builds;
-
-                    var count = builds.Count();
-                    for (int i = 0; i < count; i++)
+                    
+                    if (lastSuccessfulBuild)
                     {
-                        var build = builds[i];
-                        // fill in build info
-                        build.info = GetJobBuildInfo(jobName, build.number).Result;
-                        builds[i] = build;
+                        var lastSuccessfulNumber = jobBuilds.lastSuccessfulBuild.number;
+                        jobBuilds.lastSuccessfulBuild.info 
+                            = GetJobBuildInfo(jobName, lastSuccessfulNumber).Result;
+                        return Enumerable.Repeat(jobBuilds.lastSuccessfulBuild, 1);
                     }
+                    else
+                    {
+                        var builds = jobBuilds.builds;
 
-                    return jobBuilds.builds;
+                        var count = builds.Count();
+                        for (int i = 0; i < count; i++)
+                        {
+                            var build = builds[i];
+                            // fill in build info
+                            build.info = GetJobBuildInfo(jobName, build.number).Result;
+                            builds[i] = build;
+                        }
+
+                        return jobBuilds.builds;
+                    }
                 }
                 else
                 {
@@ -364,7 +393,13 @@ namespace ManagedCodeGen
                     case ListOption.Builds:
                         {
                             var builds = cic.GetJobBuilds("dotnet_coreclr",
-                                "master", config.JobName);
+                                "master", config.JobName, config.LastSuccessful);
+
+                            if (config.LastSuccessful && builds.Result.Any())
+                            {
+                                Console.WriteLine("Last successful build:");    
+                            }
+                            
                             PrettyBuilds(builds.Result);
                         }
                         break;
@@ -437,13 +472,27 @@ namespace ManagedCodeGen
             // the bits into the asmdiff.json config file.
             public static async Task Copy(CIClient cic, Config config)
             {
+                if (config.LastSuccessful)
+                {
+                    // Querry last successful build and extract the number.
+                    var builds = cic.GetJobBuilds("dotnet_coreclr",
+                                "master", config.JobName, true);
+                    
+                    if (!builds.Result.Any())
+                    {
+                        Console.WriteLine("Last successful not found on server.");
+                        return;
+                    }
+                    
+                    Build lastSuccess = builds.Result.First();
+                    config.Number = lastSuccess.number;
+                }
+                
                 string tag = String.Format("{0}-{1}", config.JobName, config.Number);
                 string outputPath = config.OutputPath;
-                string toolPath = Path.Combine(outputPath, "tools", tag);
 
                 // Pull down the zip file.
-                Directory.CreateDirectory(toolPath);
-                DownloadZip(cic, config, toolPath).Wait();
+                DownloadZip(cic, config, outputPath).Wait();
             }
 
             // Download zip file.  It's arguable that this should be in the 

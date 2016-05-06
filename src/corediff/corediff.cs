@@ -36,7 +36,6 @@ namespace ManagedCodeGen
             private string _baseExe = null;
             private string _diffExe = null;
             private string _outputPath = null;
-            private bool _list = false;
             private bool _analyze = false;
             private string _tag = null;
             private string _platformPath = null;
@@ -45,7 +44,6 @@ namespace ManagedCodeGen
             private bool _frameworksOnly = false;
             private bool _verbose = false;
             private string _jobName;
-            private string _coreclrBranchName;
             private string _number;
             private bool _lastSuccessful;
             private string _jitDasmRoot;
@@ -63,18 +61,24 @@ namespace ManagedCodeGen
 
                 _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
+                    // Diff command section.
                     syntax.DefineCommand("diff", ref _command, Commands.Diff, "Run asm diff of base/diff.");
                     syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe or tag.");
                     syntax.DefineOption("d|diff", ref _diffExe, "The diff compiler exe or tag.");
                     syntax.DefineOption("o|output", ref _outputPath, "The output path.");
-                    syntax.DefineOption("a|analyze", ref _analyze, "Analyze resulting base, diff dasm directories.");
-                    syntax.DefineOption("t|tag", ref _tag, "Name of root in output directory.  Allows for many sets of output.");
+                    syntax.DefineOption("a|analyze", ref _analyze, 
+                        "Analyze resulting base, diff dasm directories.");
+                    syntax.DefineOption("t|tag", ref _tag, 
+                        "Name of root in output directory.  Allows for many sets of output.");
                     syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
                     syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
                     syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
                     syntax.DefineOption("test_root", ref _testPath, "Path to test tree");
-                    syntax.DefineCommand("list", ref _command, Commands.List, "List defaults and available tools.");
+                    // List command section.
+                    syntax.DefineCommand("list", ref _command, Commands.List, 
+                        "List defaults and available tools.");
+                    // Install command section.
                     syntax.DefineCommand("install", ref _command, Commands.Install, "Install tool in config.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
                     syntax.DefineOption("n|number", ref _number, "Job number.");
