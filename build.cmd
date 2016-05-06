@@ -50,7 +50,7 @@ goto :argLoop
 :build
 
 REM Declare the list of projects
-set projects=corediff mcgdiff analyze
+set projects=corediff mcgdiff analyze cijobs
 
 REM Build each project
 for %%p in (%projects%) do (

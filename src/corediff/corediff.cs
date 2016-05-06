@@ -36,14 +36,14 @@ namespace ManagedCodeGen
             private bool _frameworksOnly = false;
             private bool _verbose = false;
 
-            private JObject jObj;
+            private JObject _jObj;
 
             public Config(string[] args)
             {
                 // Get configuration values from JIT_DASM_ROOT/asmdiff.json
-                
+
                 LoadFileConfig();
-                
+
                 _syntaxResult = ArgumentSyntax.Parse(args, syntax =>
                 {
                     syntax.DefineOption("b|base", ref _baseExe, "The base compiler exe or tag.");
@@ -62,14 +62,14 @@ namespace ManagedCodeGen
                 // Run validation code on parsed input to ensure we have a sensible scenario.
 
                 Validate();
-                
+
                 ExpandToolTags();
-                
+
                 DeriveOutputTag();
-                
+
                 // Now that output path and tag are guaranteed to be set, update
                 // the output path to included the tag.
-                _outputPath = Path.Combine(_outputPath, _tag);   
+                _outputPath = Path.Combine(_outputPath, _tag);
             }
 
             private void DeriveOutputTag()
@@ -91,7 +91,7 @@ namespace ManagedCodeGen
                             }
                         }
                     }
-                    
+
                     currentCount++;
                     _tag = String.Format("dasmset_{0}", currentCount);
                     Console.WriteLine("tag {0}", _tag);
@@ -100,25 +100,25 @@ namespace ManagedCodeGen
 
             private void ExpandToolTags()
             {
-                var tools = jObj["tools"];
-                
+                var tools = _jObj["tools"];
+
                 foreach (var tool in tools)
                 {
                     var tag = (string)tool["tag"];
                     var path = (string)tool["path"];
 
-                    if (_baseExe == tag) 
+                    if (_baseExe == tag)
                     {
                         // passed base tag matches installed tool, reset path.
                         _baseExe = Path.Combine(path, "crossgen");
-                    } 
+                    }
 
                     if (_diffExe == tag)
                     {
                         // passed diff tag matches installed tool, reset path.
                         _diffExe = Path.Combine(path, "crossgen");
                     }
-                }    
+                }
             }
 
             private void Validate()
@@ -144,96 +144,98 @@ namespace ManagedCodeGen
                     _syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
                 }
             }
-            
+
             public string GetToolPath(string tool, out bool found)
             {
-                var token = jObj["default"][tool];
-                
-                if (token != null)
-                {
-                    found = true;
-                    
-                    string tag = jObj["default"][tool].Value<string>();
-                    var path = jObj["tools"].Children()
-                                        .Where(x => (string)x["tag"] == tag)
-                                        .Select(x => (string)x["path"]);
-                    if (!path.Any()) {
-                        Console.WriteLine("Config error: can't find tool tag: \"{0}\" specified in default", tool);
-                    }
-                    
-                    return path.Any() ? path.First() : null;
-                }
-                
-                found = false;
-                return null;
-            }
-            
-            public T ExtractDefault<T>(string name, out bool found) {
-                var token = jObj["default"][name];
-                
+                var token = _jObj["default"][tool];
+
                 if (token != null)
                 {
                     found = true;
 
-                    try 
+                    string tag = _jObj["default"][tool].Value<string>();
+                    var path = _jObj["tools"].Children()
+                                        .Where(x => (string)x["tag"] == tag)
+                                        .Select(x => (string)x["path"]);
+                    if (!path.Any())
                     {
-                        return token.Value<T>();   
+                        Console.WriteLine("Config error: can't find tool tag: \"{0}\" specified in default", tool);
+                    }
+
+                    return path.Any() ? path.First() : null;
+                }
+
+                found = false;
+                return null;
+            }
+
+            public T ExtractDefault<T>(string name, out bool found)
+            {
+                var token = _jObj["default"][name];
+
+                if (token != null)
+                {
+                    found = true;
+
+                    try
+                    {
+                        return token.Value<T>();
                     }
                     catch (System.FormatException e)
                     {
                         Console.WriteLine("Bad format for default {0}.  See asmdiff.json", name, e);
                     }
                 }
-                
+
                 found = false;
-                return default (T);        
+                return default(T);
             }
-            
-            void LoadFileConfig ()
+
+            private void LoadFileConfig()
             {
                 string jitDasmRoot = Environment.GetEnvironmentVariable("JIT_DASM_ROOT");
 
-                if (jitDasmRoot != null) 
+                if (jitDasmRoot != null)
                 {
                     string path = Path.Combine(jitDasmRoot, "asmdiff.json");
 
                     if (File.Exists(path))
                     {
                         string configJson = File.ReadAllText(path);
-                        
-                        jObj = JObject.Parse(configJson);
-                        
+
+                        _jObj = JObject.Parse(configJson);
+
                         // Check if there is any default config specified.
-                        if (jObj["default"] != null) 
+                        if (_jObj["default"] != null)
                         {
                             bool found;
-                            
+
                             // Find baseline tool if any.
                             string basePath = GetToolPath("base", out found);
-                            if (found) 
+                            if (found)
                             {
                                 _baseExe = Path.Combine(basePath, "crossgen");
                             }
-                            
+
                             // Find diff tool if any
                             string diffPath = GetToolPath("diff", out found);
                             if (found)
                             {
                                 _diffExe = Path.Combine(diffPath, "crossgen");
                             }
-                            
+
                             // Set up output
                             var outputPath = ExtractDefault<string>("output", out found);
                             _outputPath = (found) ? outputPath : _outputPath;
-                            
+
                             // Setup platform path (core_root).
                             var platformPath = ExtractDefault<string>("core_root", out found);
                             _platformPath = (found) ? platformPath : _platformPath;
-                            
+
                             // Set up test path (test_root).
                             var testPath = ExtractDefault<string>("test_root", out found);
                             _testPath = (found) ? testPath : _testPath;
-                            
+
                             var analyze = ExtractDefault<bool>("analyze", out found);
                             _analyze = (found) ? analyze : _analyze;
                         }
@@ -243,12 +245,12 @@ namespace ManagedCodeGen
                         Console.WriteLine("Can't find asmdiff.json on {0}", jitDasmRoot);
                     }
                 }
-                else 
+                else
                 {
-                       Console.WriteLine("No default asmdiff configuration found.");
+                    Console.WriteLine("No default asmdiff configuration found.");
                 }
             }
-            
+
             public string CoreRoot { get { return _platformPath; } }
             public string TestRoot { get { return _testPath; } }
             public string PlatformPath { get { return _platformPath; } }
@@ -439,20 +441,20 @@ namespace ManagedCodeGen
             }
 
             // Analyze completed run.
-            
-            if (config.DoAnalyze == true) 
+
+            if (config.DoAnalyze == true)
             {
                 List<string> analysisArgs = new List<string>();
-            
+
                 analysisArgs.Add("--base");
                 analysisArgs.Add(Path.Combine(config.OutputPath, "base"));
                 analysisArgs.Add("--diff");
                 analysisArgs.Add(Path.Combine(config.OutputPath, "diff"));
-                analysisArgs.Add("--recursive"); 
-                
-                Console.WriteLine("Analyze command: {0} {1}", 
+                analysisArgs.Add("--recursive");
+
+                Console.WriteLine("Analyze command: {0} {1}",
                     s_analysisTool, String.Join(" ", analysisArgs));
-                
+
                 Command analyzeCmd = Command.Create(s_analysisTool, analysisArgs);
 
                 // Wireup stdout/stderr so we can see outout.
@@ -461,7 +463,7 @@ namespace ManagedCodeGen
 
                 CommandResult analyzeResult = analyzeCmd.Execute();
             }
-            
+
             return result.ExitCode;
         }
     }
