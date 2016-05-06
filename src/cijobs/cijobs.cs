@@ -56,8 +56,6 @@ namespace ManagedCodeGen
             private bool _install = false;
             private bool _unzip = false;
             private string _outputPath;
-            private string _rid;
-            private string _jitDasmRoot;
 
             public Config(string[] args)
             {
@@ -79,37 +77,7 @@ namespace ManagedCodeGen
                     syntax.DefineOption("b|branch", ref _coreclrBranchName, "Name of branch.");
                     syntax.DefineOption("o|output", ref _outputPath, "Output path.");
                     syntax.DefineOption("u|unzip", ref _unzip, "Unzip copied artifacts");
-                    syntax.DefineOption("i|install", ref _install, "Install tool in asmdiff.json");
                 });
-
-                // Extract system RID from dotnet cli
-                List<string> commandArgs = new List<string> { "--info" };
-                Microsoft.DotNet.Cli.Utils.Command infoCmd = Microsoft.DotNet.Cli.Utils.Command.Create(
-                    "dotnet", commandArgs);
-                infoCmd.CaptureStdOut();
-                infoCmd.CaptureStdErr();
-
-                CommandResult result = infoCmd.Execute();
-
-                if (result.ExitCode != 0)
-                {
-                    Console.WriteLine("dotnet --info returned non-zero");
-                }
-
-                var lines = result.StdOut.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-
-                foreach (var line in lines)
-                {
-                    Regex pattern = new Regex(@"RID:\s*([A-Za-z0-9\.-]*)$");
-                    Match match = pattern.Match(line);
-                    if (match.Success)
-                    {
-                        _rid = match.Groups[1].Value;
-                    }
-                }
-
-                // Set up JIT_DASM_ROOT string in the context. (null or otherwise)
-                _jitDasmRoot = Environment.GetEnvironmentVariable("JIT_DASM_ROOT");
 
                 // Run validation code on parsed input to ensure we have a sensible scenario.
                 validate();
@@ -161,12 +129,8 @@ namespace ManagedCodeGen
             public string MatchPattern { get { return _matchPattern; } }
             public string CoreclrBranchName { get { return _coreclrBranchName; } }
             public bool LastSuccessful { get { return _lastSuccessful; } }
-            public bool DoInstall { get { return _install; } }
             public bool DoUnzip { get { return _unzip; } }
             public string OutputPath { get { return _outputPath; } }
-            public bool HasJitDasmRoot { get { return (_jitDasmRoot != null); } }
-            public string JitDasmRoot { get { return _jitDasmRoot; } }
-            public string RID { get { return _rid; } }
         }
 
         // The following block of simple structs maps to the data extracted from the CI system as json.
@@ -474,73 +438,12 @@ namespace ManagedCodeGen
             public static async Task Copy(CIClient cic, Config config)
             {
                 string tag = String.Format("{0}-{1}", config.JobName, config.Number);
-                string outputPath = (config.OutputPath != null)
-                    ? config.OutputPath : config.JitDasmRoot;
+                string outputPath = config.OutputPath;
                 string toolPath = Path.Combine(outputPath, "tools", tag);
-                // Object filled out with asmdiff.json if install selected.
-                JObject jObj = null;
-                JArray tools = null;
-                bool install = false;
-                string asmDiffPath = String.Empty;
-
-                if (config.DoInstall)
-                {
-                    if (config.HasJitDasmRoot)
-                    {
-                        asmDiffPath = Path.Combine(config.JitDasmRoot, "asmdiff.json");
-
-                        if (File.Exists(asmDiffPath))
-                        {
-                            string configJson = File.ReadAllText(asmDiffPath);
-                            jObj = JObject.Parse(configJson);
-                            tools = (JArray)jObj["tools"];
-
-                            if (tools.Where(x => (string)x["tag"] == tag).Any())
-                            {
-                                Console.WriteLine("{0} is already installed in the asmdiff.json. Remove before re-install.", tag);
-                                return;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Install specified but no asmdiff.json found - missing JIT_DASM_ROOT.");
-                    }
-
-                    // Flag install to happen now that we've vetted the input.
-                    install = true;
-                }
 
                 // Pull down the zip file.
                 Directory.CreateDirectory(toolPath);
                 DownloadZip(cic, config, toolPath).Wait();
-
-                if (install)
-                {
-                    JObject newTool = new JObject();
-                    newTool.Add("tag", tag);
-                    // Derive underlying tool directory based on current RID.
-                    string[] platStrings = config.RID.Split('.');
-                    string platformPath = Path.Combine(toolPath, "Product");
-                    foreach (var dir in Directory.EnumerateDirectories(platformPath))
-                    {
-                        if (Path.GetFileName(dir).ToUpper().Contains(platStrings[0].ToUpper()))
-                        {
-                            newTool.Add("path", Path.GetFullPath(dir));
-                            tools.Last.AddAfterSelf(newTool);
-                            break;
-                        }
-                    }
-                    // Overwrite current asmdiff.json with new data.
-                    using (var file = File.CreateText(asmDiffPath))
-                    {
-                        using (JsonTextWriter writer = new JsonTextWriter(file))
-                        {
-                            writer.Formatting = Formatting.Indented;
-                            jObj.WriteTo(writer);
-                        }
-                    }
-                }
             }
 
             // Download zip file.  It's arguable that this should be in the 
