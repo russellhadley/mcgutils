@@ -75,9 +75,12 @@ namespace ManagedCodeGen
                     syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
                     syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
                     syntax.DefineOption("test_root", ref _testPath, "Path to test tree");
+
                     // List command section.
                     syntax.DefineCommand("list", ref _command, Commands.List, 
-                        "List defaults and available tools.");
+                        "List defaults and available tools asmdiff.json.");
+                    syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
+
                     // Install command section.
                     syntax.DefineCommand("install", ref _command, Commands.Install, "Install tool in config.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
@@ -182,6 +185,25 @@ namespace ManagedCodeGen
 
             private void Validate()
             {
+                switch(_command)
+                {
+                    case Commands.Diff:
+                    {
+                        ValidateDiff();
+                    }
+                    break;
+                    case Commands.Install:
+                    {
+                        ValidateInstall();
+                    }
+                    break;
+                    case Commands.List:
+                    break;
+                }
+            }
+            
+            private void ValidateDiff()
+            {
                 if (_platformPath == null)
                 {
                     _syntaxResult.ReportError("Specifiy --core_root <path>");
@@ -201,6 +223,18 @@ namespace ManagedCodeGen
                 if ((_baseExe == null) && (_diffExe == null))
                 {
                     _syntaxResult.ReportError("--base <path> or --diff <path> or both must be specified.");
+                }
+            }
+            private void ValidateInstall()
+            {
+                if (_jobName == null)
+                {
+                    _syntaxResult.ReportError("Specify --jobName <name>");
+                }
+                
+                if ((_number == null) && !_lastSuccessful)
+                {
+                    _syntaxResult.ReportError("Specify --number or --last_successful to identify build to install.");
                 }
             }
 
@@ -339,7 +373,14 @@ namespace ManagedCodeGen
                     Console.WriteLine("Installed tools:");
                     foreach (var tool in tools.Children())
                     {
-                        Console.WriteLine("\t{0}: {1}", (string)tool["tag"], (string)tool["path"]);   
+                        if (_verbose) 
+                        {
+                            Console.WriteLine("\t{0}: {1}", (string)tool["tag"], (string)tool["path"]);
+                        }
+                        else
+                        {
+                            Console.WriteLine("\t{0}", (string)tool["tag"]);  
+                        }   
                     }                
                 }
             }
@@ -367,7 +408,7 @@ namespace ManagedCodeGen
                 // Check if there is any default config specified.
                 if (_jObj["default"] != null)
                 {
-                    Console.WriteLine("Default section:");
+                    Console.WriteLine("Defaults:");
 
                     PrintDefault<string>("base");
                     PrintDefault<string>("diff");

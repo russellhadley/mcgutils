@@ -2,6 +2,26 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+///////////////////////////////////////////////////////////////////////////////
+//
+//  cijobs - Continuious integration build jobs tool enables the listing of
+//  jobs built in the CI system as well as downloading their artifacts. This
+//  functionality allows for the speed up of some common dev tasks but taking
+//  advantage of work being done in the cloud.
+//
+//  Scenario 1: Start new work. When beginning a new set of changes, listing 
+//  job status can help you find a commit to start your work from. The tool
+//  answers questions like "are the CentOS build jobs passing?" and "what was
+//  the commit hash for the last successful tizen arm32 build?"
+//
+//  Scenario 2: Copy artifacts to speed up development flow. The tool enables
+//  developers to download builds from the cloud so that developers can avoid 
+//  rebuilding baseline tools on a local machine.  Need the crossgen tool for 
+//  the baseline commit for OSX diffs?  Cijobs makes this easy to copy to your
+//  system.
+//
+
+
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -52,9 +72,10 @@ namespace ManagedCodeGen
             private string _matchPattern = String.Empty;
             private string _coreclrBranchName = "master";
             private string _privateBranchName;
-            private bool _lastSuccessful = true;
+            private bool _lastSuccessful = false;
             private bool _unzip = false;
             private string _outputPath;
+            private bool _artifacts = false;
 
             public Config(string[] args)
             {
@@ -63,7 +84,8 @@ namespace ManagedCodeGen
                     // NOTE!!! - Commands and their options are ordered.  Moving an option out of line
                     // could move it to another command.  Take a careful look at how they're organized
                     // before changing.
-                    syntax.DefineCommand("list", ref _command, Command.List, "List jobs on the CI system.");
+                    syntax.DefineCommand("list", ref _command, Command.List, 
+                        "List jobs on dotnet-ci.cloudapp.net for dotnet_coreclr.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
                     syntax.DefineOption("b|branch", ref _coreclrBranchName, 
                         "Name of the branch (dotnet/coreclr, def. is master).");
@@ -72,14 +94,19 @@ namespace ManagedCodeGen
                     syntax.DefineOption("n|number", ref _number, "Job number.");
                     syntax.DefineOption("l|last_successful", ref _lastSuccessful, 
                         "List last successful build.");
+                    syntax.DefineOption("a|artifacts", ref _artifacts, "List job artifacts on server.");
 
-                    syntax.DefineCommand("copy", ref _command, Command.Copy, "Start a job on the CI system.");
+                    syntax.DefineCommand("copy", ref _command, Command.Copy, 
+                        "Copies job artifacts from dotnet-ci.cloudapp.net. " 
+                        + "Currently hardcoded to dotnet_coreclr, this command " 
+                        + "copies a zip of the artifacts under the Product sub-directory "
+                        + "that is the result of a build.");
                     syntax.DefineOption("j|job", ref _jobName, "Name of the job.");
                     syntax.DefineOption("n|number", ref _number, "Job number.");
                     syntax.DefineOption("l|last_successful", ref _lastSuccessful, 
                         "Copy last successful build.");
                     syntax.DefineOption("b|branch", ref _coreclrBranchName, 
-                        "Name of branch  (dotnet/coreclr, def. is master)..");
+                        "Name of branch  (dotnet_coreclr, def. is master)..");
                     syntax.DefineOption("o|output", ref _outputPath, "Output path.");
                     syntax.DefineOption("u|unzip", ref _unzip, "Unzip copied artifacts");
                 });
@@ -149,6 +176,7 @@ namespace ManagedCodeGen
             public bool LastSuccessful { get { return _lastSuccessful; } }
             public bool DoUnzip { get { return _unzip; } }
             public string OutputPath { get { return _outputPath; } }
+            public bool Artifacts { get { return _artifacts; } }
         }
 
         // The following block of simple structs maps to the data extracted from the CI system as json.
@@ -400,14 +428,14 @@ namespace ManagedCodeGen
                                 Console.WriteLine("Last successful build:");    
                             }
                             
-                            PrettyBuilds(builds.Result);
+                            PrettyBuilds(builds.Result, config.Artifacts);
                         }
                         break;
                     case ListOption.Number:
                         {
                             var info = cic.GetJobBuildInfo(config.JobName, config.Number);
                             // Pretty build info
-                            PrettyBuildInfo(info.Result);
+                            PrettyBuildInfo(info.Result, config.Artifacts);
                         }
                         break;
                     default:
@@ -426,7 +454,7 @@ namespace ManagedCodeGen
                 }
             }
 
-            private static void PrettyBuilds(IEnumerable<Build> buildList)
+            private static void PrettyBuilds(IEnumerable<Build> buildList, bool artifacts = false)
             {
                 foreach (var build in buildList)
                 {
@@ -434,7 +462,7 @@ namespace ManagedCodeGen
                     if (result != null)
                     {
                         Console.Write("build {0} - {1} : ", build.number, result);
-                        PrettyBuildInfo(build.info);
+                        PrettyBuildInfo(build.info, artifacts);
                     }
                 }
             }
@@ -458,7 +486,7 @@ namespace ManagedCodeGen
                     Console.WriteLine("    artifacts:");
                     foreach (var artifact in info.artifacts)
                     {
-                        Console.WriteLine("       {0}", artifact.fileName);
+                        Console.WriteLine("       {0}", artifact.relativePath);
                     }
                 }
             }
@@ -511,4 +539,3 @@ namespace ManagedCodeGen
         }
     }
 }
-
