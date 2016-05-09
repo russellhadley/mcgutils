@@ -16,7 +16,7 @@ function usage
     echo "    -b <BUILD TYPE> : Build type, can be Debug or Release."
     echo "    -h              : Show this message."
     echo "    -f              : Install default framework directory in <script_root>/fx."
-    echo "    -p              : Publish utilites."
+    echo "    -p              : Publish utilities."
     echo ""
 }
 

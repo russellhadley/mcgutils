@@ -247,15 +247,15 @@ namespace ManagedCodeGen
                     found = true;
 
                     string tag = _jObj["default"][tool].Value<string>();
+
+                    // Extract set value for tool and see if we can find it
+                    // in the installed tools.
                     var path = _jObj["tools"].Children()
                                         .Where(x => (string)x["tag"] == tag)
                                         .Select(x => (string)x["path"]);
-                    if (!path.Any())
-                    {
-                        Console.WriteLine("Config error: can't find tool tag: \"{0}\" specified in default", tool);
-                    }
-
-                    return path.Any() ? path.First() : null;
+                    // If the tag resolves to a tool return it, otherwise just return it 
+                    // as a posible path.
+                    return path.Any() ? path.First() : tag;
                 }
 
                 found = false;

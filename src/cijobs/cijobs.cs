@@ -519,6 +519,9 @@ namespace ManagedCodeGen
                 string tag = String.Format("{0}-{1}", config.JobName, config.Number);
                 string outputPath = config.OutputPath;
 
+                // Create directory if it doesn't exist.
+                Directory.CreateDirectory(outputPath);
+
                 // Pull down the zip file.
                 DownloadZip(cic, config, outputPath).Wait();
             }
