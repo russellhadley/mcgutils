@@ -255,7 +255,7 @@ Top method improvements by size (bytes):
 ```
 
 If `--tsv <file_name>` or `--json <file_name>` is passed, all the diff data extracted and analyzed 
-will be written out for futher analysis.
+will be written out for further analysis.
 
 
 ## Leveraging cloud resources
@@ -328,7 +328,7 @@ $ cijobs copy --job checked_osx --last_successful --output ../output/mytools --u
 Downloading: job/dotnet_coreclr/job/master/job/checked_osx/1609/artifact/bin/Product/*zip*/Product.zip
 ```
 
-Results are unziped in the output after they are downloaded.
+Results are unzipped in the output after they are downloaded.
 
 ```
 $ ls ../output/mytools/
@@ -448,5 +448,5 @@ usage: corediff install [-j <arg>] [-n <arg>] [-l] [-b <arg>]
 ```
 
 The options to `install` are the same as you would use for the cijobs copy command since corediff 
-uses cijobs to download the appropraite tools.  I.e. the `install` command is just a wrapper over 
+uses cijobs to download the appropriate tools.  I.e. the `install` command is just a wrapper over 
 cijobs to simplify getting tools into the default location correctly.
