@@ -30,7 +30,7 @@ popd
 
 # set utilites in the current path
 
-export PATH=$PATH:$root/mcgutils/bin/mcgdiff:$root/mcgutils/bin/corediff:$root/mcgutils/bin/analyze
+export PATH=$PATH:$root/mcgutils/bin/mcgdiff:$root/mcgutils/bin/corediff:$root/mcgutils/bin/analyze:$root/mcgutils/bin/cijobs
 
 # launch getstarted.md doc
 

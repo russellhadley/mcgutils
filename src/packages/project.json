@@ -1,10 +1,10 @@
 {
   "version": "1.0.0-*",
-  "compilationOptions": {
+  "buildOptions": {
     "emitEntryPoint": true
   },
   "dependencies": {
-    "Microsoft.NETCore.App": "1.0.0-rc2-3002471"
+    "Microsoft.NETCore.App": "1.0.0-rc2-3002668"
   },
   "frameworks": {
     "netcoreapp1.0": {
@@ -14,8 +14,7 @@
     }
   },
   "runtimes": { 
-      "win81-x64": {},
-      "win10-x64": {}, 
+      "win81-x64": {}, 
       "ubuntu.14.04-x64": {},
       "osx.10.10-x64": {},
       "osx.10.11-x64": {} 

@@ -49,7 +49,7 @@ namespace ManagedCodeGen
                       + "counterparts in diff, and vice-versa. Update size deltas accordingly.");
                     syntax.DefineOption("json", ref _json,
                         "Dump analysis data to specified file in JSON format.");
-                    syntax.DefineOption("tsv", ref _tsv, 
+                    syntax.DefineOption("tsv", ref _tsv,
                         "Dump analysis data to specified file in tab-separated format.");
                 });
 
@@ -80,7 +80,7 @@ namespace ManagedCodeGen
             public string JsonFileName { get { return _json; } }
             public bool DoGenerateJson { get { return _json != null; } }
             public bool DoGenerateTSV { get { return _tsv != null; } }
-            public bool Reconcile {  get { return _reconcile; } }
+            public bool Reconcile { get { return _reconcile; } }
         }
 
         public class FileInfo
@@ -166,16 +166,28 @@ namespace ManagedCodeGen
 
                 foreach (MethodInfo m in methodsOnlyInBase)
                 {
-                    reconciles.Add(new MethodDelta { name = m.name, baseBytes = m.totalBytes, diffBytes = 0,
-                        baseOffsets = m.functionOffsets, diffOffsets = null });
+                    reconciles.Add(new MethodDelta
+                    {
+                        name = m.name,
+                        baseBytes = m.totalBytes,
+                        diffBytes = 0,
+                        baseOffsets = m.functionOffsets,
+                        diffOffsets = null
+                    });
                     reconciledBytesBase += m.totalBytes;
                     reconciledCountBase++;
                 }
 
                 foreach (MethodInfo m in methodsOnlyInDiff)
                 {
-                    reconciles.Add(new MethodDelta { name = m.name, baseBytes = 0, diffBytes = m.totalBytes,
-                        baseOffsets = null, diffOffsets = m.functionOffsets });
+                    reconciles.Add(new MethodDelta
+                    {
+                        name = m.name,
+                        baseBytes = 0,
+                        diffBytes = m.totalBytes,
+                        baseOffsets = null,
+                        diffOffsets = m.functionOffsets
+                    });
                     reconciledBytesDiff += m.totalBytes;
                     reconciledCountDiff++;
                 }

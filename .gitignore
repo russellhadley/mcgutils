@@ -9,3 +9,7 @@
 
 # project system lock files
 project.lock.json
+
+# vs files
+.vs
+browse.VC.db

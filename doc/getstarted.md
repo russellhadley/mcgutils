@@ -18,9 +18,24 @@ GitHub repo for directions on building.
 * git - The analyze tool uses `git diff` to check for textual differences since this is
   consistent across platforms, and fast.
 
+## Tools included in the repo
+
+* mcgdiff - Produce *.dasm from baseline/diff tools for an assembly or set of assemblies.
+* cijobs - List builds by job from the Jenkins CI for dotnet coreclr and enable downloads of
+  build artifacts from the cloud.  These tools can be used in base/diff comparisons so 
+  developers can avoid replicating these builds on local machines.
+* analyze - Compare and analyze *.dasm files from baseline/diff.  Produces a report on diffs, 
+  total size regression/improvement, and size regression/improvement by file and method.
+* corediff - Driver tool that implements a common dev flow.  Includes a configuration file 
+  for common defaults, and implements directory scheme for "installing" tools for use later.
+
 ## Build the tools
 
-Build mcgutils using the build script in the root of the repo: `build.{cmd,sh}`. By 
+A `bootstrap.{cmd,sh}` script is provided in the root which will validate all tool depenedencies, 
+build the repo, pubish the resulting bins, and place them on the path.  This can be run to setup 
+the developer in one shot.
+
+To build mcgutils using the build script in the root of the repo: `build.{cmd,sh}`. By 
 default the script just builds the tools and does not publish them in a separate directory. 
 To publish the utilities add the '-p' flag which publishes each utility as a standalone app 
 in a directory under ./bin in the root of the repo.  Additionally, to download the default set 
@@ -34,24 +49,47 @@ build.sh [-b <BUILD TYPE>] [-f] [-h] [-p]
     -b <BUILD TYPE> : Build type, can be Debug or Release.
     -h              : Show this message.
     -f              : Install default framework directory in <script_root>/fx.
-    -p              : Publish utilites.
+    -p              : Publish utilities.
 ```
 
 ## 50,000 foot view
 
-There are two different different diff tools in this repo and they both work together to make a 
-diff run.  The first, mcgdiff, is the tool that knows how to generate assembly code into a `*.dasm` file.  It's intended 
-to be simple.  It takes a base and/or diff crossgen and drives it to produce a `*.dasm` file on the 
-specified output path.  Mcgdiff doesn't have any internal knowledge of frameworks, file names 
-or directory names, rather it is a low level tool for generating disassembly output.  Corediff 
-on the other hand knows about interesting frameworks to generate output for, understands 
-the structure of the built test tree in CoreCLR, and generally holds the "how" or the policy part 
-of a diff run.  With this context, corediff drives the mcgdiff tool to make an output a particular 
-directory structure for coreclr.  With this in mind what follows is an outline of a few ways to 
-generate diffs for CoreCLR using corediff and mcgdiff.  This is a tactical approach and it tries 
-to avoid extraneous discussion of internals.
+In this repo there is a tool to produce dasm output from the JIT (mcgdiff), one to analyze results 
+(analyze), one to find and copy down tool drops from the CI, and a driver to pull them all together 
+to make a diff run.  With this base functionality most common dev flows can be implemented.  These 
+will enable you to evaluate and describe the effect of your changes across significant inputs.
+The first, mcgdiff, is the tool that knows how to generate assembly code into 
+a `*.dasm` file.  It's intended to be simple.  It takes a base and/or diff crossgen and drives it to 
+produce a `*.dasm` file on the specified output path.  Mcgdiff doesn't have any internal knowledge 
+of frameworks, file names or directory names, rather it is a low level tool for generating 
+disassembly output.  Corediff, the driver, on the other hand knows about interesting frameworks 
+to generate output for, understands the structure of the built test tree in CoreCLR, knows where 
+the different toolsets are kept, and generally holds the "how", or the policy part, of a diff run.  
+With this context, corediff drives the mcgdiff tool to make an output a particular directory 
+structure for coreclr.  With this in mind what follows is an outline of a few ways to generate 
+diffs for CoreCLR using the mcgutils. This is a tactical approach and it tries to avoid extraneous 
+discussion of internals.
+A note on defaults: corediff understands an environment variable, `JIT_DASM_ROOT`, that refers to a 
+directory that contains a default config file in the json format.  This location, and the defaults in 
+the config file can be used to simplify the command lines that are outlined below.  For the purposes 
+of introduction the full command lines are shown below, but in the configuration section there is a 
+discussion of how to include the defaults to simplify the command lines and the overall dev flow.
 
-## Producing a baseline for CoreCLR
+Basic corediff commands:
+```
+$ corediff --help
+usage: corediff <command> [<args>]
+
+    diff       Run asm diff of base/diff.
+    list       List defaults and available tools asmdiff.json.
+    install    Install tool in config.
+
+```
+
+In the following scenarios we will be focusing on the diff command.  The list and install commands are 
+outlined in the configuration section.
+
+## Producing diffs for CoreCLR
 
 Today there are two scenarios within CoreCLR depending on platform.  This is largely a function 
 of building the tests and Windows is further ahead here.  Today you have to consume the results 
@@ -69,18 +107,21 @@ simplified flow if 1) a platform builds CoreCLR/mscorlib and 2) the diff utiliti
 Steps:
 * Build a baseline CoreCLR by following build directions in coreclr repo 
   [build doc directory](https://github.com/dotnet/coreclr/tree/master/Documentation/building).
-* Ensure corediff and mcgdiff are on the path.
+* Build a diff CoreCLR by following the same directions above either in a seperate repo, or in the
+  same repo after saving off the baseline Product directory.
+* Ensure corediff, analyze, and mcgdiff are on the path.
 * Create an empty output directory.
 * Invoke command
 ``` 
-> corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
+$ corediff diff --analyze --base <base_coreclr_repo>/bin/Product/<platform>/crossgen --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
 ```
+* View summary output produced by corediff via analyze.  Report returned on stdout.
 * Check output directory
 ```
-> ls <output_directory>/base/*
+$ ls <output_directory>/*
 ```
-The output directory will contain a list of *.dasm files produced by the code generator. These 
-are ultimately what are diff'ed.
+The output directory will contain both a `base` and `diff` directory that in turn contains a set of *.dasm 
+files produced by the code generator. These are what are diff'ed.
 
 ### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
 
@@ -92,87 +133,24 @@ to providing the test assemblies.
 Steps:
 * Build a baseline CoreCLR by following build directions in coreclr repo 
   [build doc directory](https://github.com/dotnet/coreclr/tree/master/Documentation/building).
-* Ensure corediff and mcgdiff are on the path.
+* Build a diff CoreCLR by following the same directions above either in a separate repo, or in the
+  same repo after saving off the baseline Product directory.
+* Ensure corediff, analyze, and mcgdiff are on the path.
 * Create an empty output directory.
 * Invoke command
 ```
-> corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
+$ corediff diff --analyze --base <coreclr_repo>/bin/Product/<platform>/crossgen --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
 ```
+* View summary output produced by corediff via analyze.  Report returned on stdout.
 * Check output directory
 ```
-> ls <output_directory>/base/*
+$ ls <output_directory>/*
 ```
-The base output directory should contain a tree that mirrors the test tree containing a *.dasm for 
+The base and diff output directories should contain a tree that mirrors the test tree containing a *.dasm for 
 each assembly it found.
 
 This scenario will take a fair bit longer than the first since it traverses and identifies test 
-assembles in addition to the mscorlib/frameworks *.asm.
-
-## Producing diff output for CoreCLR
-
-In simple terms you just run the base directions but instead of passing '--base' you pass '--diff' 
-and use a path to a different CoreCLR crossgen.
-
-This diff system is built on crossgen so producing a new crossgen with a new code generator - either 
-through modifying your base CoreCLR repo, adding a second repo with changes, or pulling from build 
-lab resource - and running it with '--diff' will produce a parallel 'diff' tree in the output with 
-diff'able *.dasm.
-
-Below are the two scenarios listed above with modifications for producing a 'diff' tree.
-
-### Scenario 1 - Running the mscorlib and frameworks diffs using just the assemblies made available by mcgutils.
-
-Running the build script as mentioned above with '-f' produces a standalone './fx' directory in the root 
-of the repo.  This can be used as inputs to the diff tool and gives the developer a simplified flow if 1) 
-a platform builds CoreCLR/mscorlib and 2) the diff utilities build.
-
-Steps:
-* Build a new crossgen - either in a new repo or new branch in the current repo.
-* Ensure corediff and mcgdiff are on the path.
-* Reuse same output directory from above.
-* Invoke command
-``` 
-> corediff --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <mcgutils_repo>/fx
-```
-* Check output directory
-```
-> ls <output_directory>/diff/*
-```
-The diff output directory will contain a list of *.dasm files produced by the code generator. These are 
-ultimatly what are diff'ed.
-
-### Scenario 2 - Running mscorlib, frameworks, and test assets diffs using the resources generated for a CoreCLR test run.
-
-In this scenario follow the steps outlined in CoreCLR to set up for the tests a given platform. This will 
-create a "core_root" directory in the built test assets that has all the platform frameworks as well as 
-test dependencies.  This should be used as the 'core_root' for the test run in addition to providing the 
-test assemblies.
-
-Steps:
-* Build a new crossgen - either in a new repo or new branch in the current repo.
-* Ensure corediff and mcgdiff are on the path.
-* Reuse same output directory from above.
-* Invoke command
-```
-> corediff --diff <diff_coreclr_repo>/bin/Product/<platform>/crossgen --output <output_directory> --core_root <test_root>/core_root --test_root <test_root>
-```
-* Check output directory
-```
-ls <output_directory>/diff/*
-```
-
-## Putting it all together
-
-In the above example we showed how to produce base and diff *.dasm in separate steps but if a developer has 
-two separate sets of CoreCLR binaries - produced from two CoreCLR repos, or extracted from the lab - both 
-'--base' and '--diff' arguments to corediff may be specified at the same time.  The tool will run the inputs 
-through both tools (though not in parallel today) and produce the 'base' and 'diff' directories of output.
-
-```
-> corediff --base <coreclr_repo>/bin/Product/<platform>/crossgen --diff <diff_coreclr_repo> --output <output_directory> --core_root <core_root_directory> [ --test_root <test_root> ]
-```
-
-Note: that this may be used with either the built 'core_root' or with the mcgutils internal './fx' directory.
+assembles in addition to the mscorlib/frameworks *.dasm.
 
 ### Notes on tags
 
@@ -194,17 +172,19 @@ The above scenario should show that there is some flexibility in the work flow.
 
 ## Analyzing diffs
 
-The mcgutils suite includes the analyze tool to speed up analyzing diffs produced by corediff/mcgdiffs utilities.
-This tool cracks the *.dasm files produced in the earlier steps and extracts the bytes difference between 
-the two.  This data is keyed by file and method name - for instance two files with different names will not 
-diff even if passed as the base and diff since the tool is looking to identify files missing from the base 
-dataset vs the diff dataset.
+The mcgutils suite includes the analyze tool for analyzing diffs produced by corediff/mcgdiffs 
+utilities. In the example above the `--analyze` switch to corediff caused the tool to be invoked 
+on the diff directories created by corediff. Analyze cracks the *.dasm files produced in the 
+earlier steps and extracts the bytes difference between the two based on the output produced 
+by the JIT.  This data is keyed by file and method name - for instance two files with 
+different names will not diff even if passed as the base and diff since the tool is looking 
+to identify files missing from the base dataset vs the diff dataset.
 
 Here is the help output:
 ```
 $ analyze --help
-usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
-               [--csv <arg>]
+usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--reconcile]
+               [--json <arg>] [--tsv <arg>]
 
     -b, --base <arg>     Base file or directory.
     -d, --diff <arg>     Diff file or directory.
@@ -216,15 +196,20 @@ usage: analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w] [--json <arg>]
     -w, --warn           Generate warning output for files/methods that
                          only exists in one dataset or the other (only
                          in base or only in diff).
+    --reconcile          If there are methods that exist only in base or
+                         diff, create zero-sized counterparts in diff,
+                         and vice-versa. Update size deltas accordingly.
     --json <arg>         Dump analysis data to specified file in JSON
                          format.
-    --csv <arg>          Dump analysis data to specified file in CSV
-                         format.
+    --tsv <arg>          Dump analysis data to specified file in
+                         tab-separated format.
 ```
 
 For the simplest case just point the tool at a base and diff dir produce by corediff and it 
-will outline byte diff across the whole diff. On an significant set of diffs it will produce output 
-like the following:
+will outline byte diff across the whole diff. This is what the corediff command lines in 
+the previous section do. 
+
+On a significant set of diffs it will produce output like the following:
 
 ```
 $ analyze --base ~/Work/glue/output/base --diff ~/Work/glue/output/diff
@@ -269,5 +254,199 @@ Top method improvements by size (bytes):
 3762 total methods with size differences.
 ```
 
-If `--csv <file_name>` or `--json <file_name>` is passed, all the diff data extracted and analyzed 
-will be written out for futher analysis.
+If `--tsv <file_name>` or `--json <file_name>` is passed, all the diff data extracted and analyzed 
+will be written out for further analysis.
+
+
+## Leveraging cloud resources
+
+CoreCLR uses a Jenkins CI instance to implement the quality bar checkins and inflight development. 
+This system defines a number of build jobs that produce artifacts that are cached for a peroid. 
+The cijobs tool allows for developers to easily access these artifacts to avoid rebuilding them 
+locally.
+
+The cijobs functionality is split into two different commands, list and copy. The first, `list` 
+allows for command line querying of job output.  The second, `copy`, copies built artifacts from 
+particular jobs from the cloud to the local machine.
+
+Here's the base help output:
+
+```
+$ cijobs --help
+usage: cijobs <command> [<args>]
+
+    list    List jobs on dotnet-ci.cloudapp.net for dotnet_coreclr.
+    copy    Copies job artifacts from dotnet-ci.cloudapp.net. Currently
+            hardcoded to dotnet_coreclr, this command copies a zip of
+            the artifacts under the Product sub-directory that is the
+            result of a build.
+``` 
+
+A common question for a developer might be "what is the last successful OSX checked build?"
+
+```
+$ cijobs list --match "osx"
+
+job checked_osx
+job checked_osx_flow
+job checked_osx_flow_prtest
+job checked_osx_prtest
+job checked_osx_tst
+job checked_osx_tst_prtest
+job debug_osx
+job debug_osx_flow
+job debug_osx_flow_prtest
+job debug_osx_prtest
+job debug_osx_tst
+job debug_osx_tst_prtest
+job release_osx
+job release_osx_flow
+...
+``` 
+
+The previous example shows searching for job names that match "osx".  The checked_osx jobs is the 
+one the developer wants.  (Some familiarity with the jobs running on the server is helpful. 
+Visit dotnet-ci.cloudapp.net to familarize yourself with what's available.)
+
+Further querying the `checked_osx` job for the last successful build can be done with this command 
+line.
+
+```
+$ cijobs list --job checked_osx --last_successful
+
+Last successful build:
+build 1609 - SUCCESS : commit 74798b5b95aca1b27050038202034448a523c9f9
+```
+
+With this in hand two things can be acomplished.  First, new development for an feature could be 
+started based on the commit hash returned, second, the tools generated by this job can be downloaded 
+for use locally.
+
+```
+$ cijobs copy --job checked_osx --last_successful --output ../output/mytools --unzip
+
+Downloading: job/dotnet_coreclr/job/master/job/checked_osx/1609/artifact/bin/Product/*zip*/Product.zip
+```
+
+Results are unzipped in the output after they are downloaded.
+
+```
+$ ls ../output/mytools/
+Product		Product.zip
+
+```
+
+One comment on the underlying Jenkins feature.  The artifacts are kept and managed by a Jenkins plug-in 
+used by the system.  This plug-in will zip on demand at any point in the defined artifacts output tree. 
+Today we only use the Product sub-directory but this could be extended in the future.
+
+## Configuring defaults
+
+The command lines for many of the tools in the repo are large and can get involved.  Because of this, 
+and to help speed up the typical dev flow implemented by corediff, a default config file and output 
+location can be defined in the environment.  JIT_DASM_ROOT, when defined in the environment, tells 
+corediff where to generate output by default as well as where the asmdiff.json containing default 
+values and installed tools can be found.
+
+```
+$ export JIT_DASM_ROOT=~/Work/output
+$ ls -1 $JIT_DASM_ROOT
+asmdiff.json
+dasmset_1
+dasmset_2
+dasmset_3
+dasmset_4
+dasmset_5
+tools
+```
+
+The above example shows a populated JIT_DASM_ROOT.  The asmdiff.json file contains defaults, 
+the `dasmset_(x)` contain multiple iterations of output from corediff, and the tools directory 
+contains installed tools.
+
+### asmdiff.json
+
+A sample [asmdiff.json](TODO) is included in the mcgutils repo as an example that can be modified 
+for a developers own context.  We will go through the different elements here for added detail. 
+The most interesting section of the file is the `"default"` section.  Each sub element of default 
+maps directly to corediff option name.  Setting a default value here for any one of them will 
+cause corediff to set them to the listed value on start up and then only override that value if 
+new options are passed on the command line.  The `"base"` and `"diff"` entries are worth going 
+into in more detail.  The `"base"` is set to `"checked_osx-1526"`.  Looking down in the `"tools"` 
+section shows that the tool is installed in the `tools` sub-directory of JIT_DASM_ROOT.  Any 
+of the so entered tools can be used in the default section as a value, but they can also be 
+passed on the command line as the value for `--base` or `--diff`.
+
+```
+{
+  "default": {
+    "base": "checked_osx-1526",
+    "diff": "/Users/russellhadley/Work/dotnet/coreclr/bin/Product/OSX.x64.Checked",
+    "analyze": "true",
+    "frameworksonly": "true",
+    "output": "/Users/russellhadley/Work/glue/output",
+    "core_root": "/Users/russellhadley/Work/glue/mcgutils/fx"
+  },
+  "tools": [
+    {
+      "tag": "checked_osx-1439",
+      "path": "/Users/russellhadley/Work/glue/output/tools/checked_osx-1439/Product/OSX.x64.Checked"
+    },
+    {
+      "tag": "checked_osx-1442",
+      "path": "/Users/russellhadley/Work/glue/output/tools/checked_osx-1442/Product/OSX.x64.Checked"
+    },
+    {
+      "tag": "checked_osx-1443",
+      "path": "/Users/russellhadley/Work/glue/output/tools/checked_osx-1443/Product/OSX.x64.Checked"
+    },
+    {
+      "tag": "checked_osx-1526",
+      "path": "/Users/russellhadley/Work/glue/output/tools/checked_osx-1526/Product/OSX.x64.Checked"
+    }
+  ]
+}
+```
+
+### Listing current defaults
+
+The corediff command `list` will read the current JIT_DASM_ROOT path, open asmdiff.json, and list 
+the results.  Adding `--verbose` will show the associated file system paths for installed tools as well.
+
+```
+$ corediff list
+
+Defaults:
+	base: checked_osx-1526
+	diff: /Users/russellhadley/Work/dotnet/coreclr/bin/Product/OSX.x64.Checked
+	output: /Users/russellhadley/Work/glue/output
+	core_root: /Users/russellhadley/Work/glue/mcgutils/fx
+	analyze: true
+	frameworksonly: true
+
+Installed tools:
+	checked_osx-1439
+	checked_osx-1442
+	checked_osx-1443
+	checked_osx-1526
+``` 
+
+### Installing new tools
+
+The corediff command `install` will download and install a new tool to the default location 
+and update the asmdiff.json so it can be found.
+
+```
+$ corediff install --help
+usage: corediff install [-j <arg>] [-n <arg>] [-l] [-b <arg>]
+
+    -j, --job <arg>          Name of the job.
+    -n, --number <arg>       Job number.
+    -l, --last_successful    Last successful build.
+    -b, --branch <arg>       Name of branch.
+
+```
+
+The options to `install` are the same as you would use for the cijobs copy command since corediff 
+uses cijobs to download the appropriate tools.  I.e. the `install` command is just a wrapper over 
+cijobs to simplify getting tools into the default location correctly.

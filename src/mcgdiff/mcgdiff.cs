@@ -10,9 +10,8 @@
 //  tools to validate ongoing development.
 //
 //  Scenario 1: Pass A and B compilers to mcgdiff.  Using the --base and --diff
-//  arguments pass two seperate compilers and diff mscorlib (default location
-//  in base CoreCLR directory) or passed set of assemblies.  This is the most
-//  common scenario.
+//  arguments pass two seperate compilers and a passed set of assemblies.  This 
+//  is the most common scenario.
 //
 //  Scenario 2: Iterativly call mcgdiff with a series of compilers tagging
 //  each run.  Allows for producing a broader set of results like 'base',
