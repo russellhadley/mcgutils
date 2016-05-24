@@ -1,4 +1,4 @@
-# Managed Code Generation Utilities - mcgutils
+# Dotnet JIT code gen utilities - jitutils
 
 This repo holds a collection of utilites used by the Managed CodeGen team 
 to automate tasks when working on CoreCLR.  Initial utilies are around 
@@ -17,13 +17,13 @@ This will create the following directories in the repo root:
 
 Add each tool subdirectory to your path so you can easily invoke them, e.g.:
 ```
-set mcgutils=<path to root of mcgutils clone>
-set PATH=%PATH%;%mcgutils%\bin\mcgdiff;%mcgutils%\bin\corediff;%mcgutils%\bin\analyze
+set jitutils=<path to root of mcgutils clone>
+set PATH=%PATH%;%jitutils%\bin\jit-dasm;%jitutils%\bin\jit-diff;%jitutils%\bin\jit-analyze
 ```
 
 For a more complete introduction look at the [getting started guide](doc/getstarted.md).
 
-## mcgdiff
+## jit-dasm
 
 This is a general tool to produce diffs for compiled MSIL assemblies.  The 
 tool relies on a base and diff crossgen.exe as inputs, either by using a
@@ -32,9 +32,9 @@ building both a base and diff locally.
 
 Sample help commandline:
 ```
-    $ mcgdiff --help
+    $ jit-dasm --help
 
-    usage: mcgdiff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-f <arg>]
+    usage: jit-dasm [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-f <arg>]
                    [-r] [-p <arg>] [--] <assembly>...
         -b, --base <arg>        The base compiler exe.
         -d, --diff <arg>        The diff compiler exe.
@@ -50,18 +50,18 @@ Sample help commandline:
                                 scan for assemblies.
 ```
 
-## corediff
+## jit-diff
 
-Corediff is a tool specifically targeting CoreCLR.  It has a prebaked list of interesting
+jit-diff is a tool specifically targeting CoreCLR.  It has a prebaked list of interesting
 assemblies to use for generating assembly diffs and understands enough of the structure
-to make it more streamlined.  Corediff uses mcgdiff under the covers to produce the diffs so 
+to make it more streamlined.  jit-diff uses jit-dasm under the covers to produce the diffs so 
 for other projects a new utility could be produced that works in a similar way.
 
 Sample help commandline:
 ```
-    $ corediff --help
+    $ jit-diff --help
 
-    usage: corediff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>]
+    usage: jit-diff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>]
                     [--core_root <arg>] [--test_root <arg>]
         -b, --base <arg>      The base compiler exe.
         -d, --diff <arg>      The diff compiler exe.
@@ -72,17 +72,17 @@ Sample help commandline:
         --test_root <arg>     Path to test tree
 ```
 
-## analyze
+## jit-analyze
 
-The analyze tool understand the format of the *.dasm files in a diff and can extract
+The jit-analyze tool understand the format of the *.dasm files in a diff and can extract
 this data to produce a summary and/or dump the info to a unified data file (CSV, JSON)
 The common usage of the tool is to extract interesting diffs, if any, from a diff run as
 part of the development progresses.
 
 Sample help commandline:
 ```
-    $ analyze --help
-    usage: analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
+    $ jit-analyze --help
+    usage: jit-analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
                 [--json <arg>] [--csv <arg>]
 
         -b, --base <arg>     Base file or directory.

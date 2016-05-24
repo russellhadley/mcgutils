@@ -16,7 +16,7 @@ root=$(pwd)
 
 git clone https://github.com/russellhadley/mcgutils.git
 
-pushd ./mcgutils
+pushd ./jitutils
 
 # Pull in needed packages.  This works globally. (due to global.json)
 
