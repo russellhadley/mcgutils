@@ -13,13 +13,13 @@ following.
 ### The details
 
 To prepare the tools for use, from the root of the cloned jitutils repo, do the following: 
-1. Download required package dependencies: `dotnet restore`
+ 1. Download required package dependencies: `dotnet restore`
     * NOTE: On Mac, you need to first use `ulimit -n 2048` or the `dotnet restore` will fail.
-2. Build and publish the tools: `build.{cmd|sh} -f -p`
+ 2. Build and publish the tools: `build.{cmd|sh} -f -p`
 
 This will create the following directories in the repo root:
-1. `bin` - contains one directory for each built tool.
-2. `fx` - contains a set of frameworks assemblies that can be used for asm diffs.
+ 1. `bin` - contains one directory for each built tool.
+ 2. `fx` - contains a set of frameworks assemblies that can be used for asm diffs.
 
 Add each tool subdirectory to your path so you can easily invoke them, e.g.:
 ```
