@@ -26,8 +26,8 @@ namespace ManagedCodeGen
             List
         }
         
-        private static string s_asmTool = "mcgdiff";
-        private static string s_analysisTool = "analyze";
+        private static string s_asmTool = "jit-dasm";
+        private static string s_analysisTool = "jit-analyze";
 
         public class Config
         {
@@ -87,6 +87,7 @@ namespace ManagedCodeGen
                     syntax.DefineOption("n|number", ref _number, "Job number.");
                     syntax.DefineOption("l|last_successful", ref _lastSuccessful, "Last successful build.");
                     syntax.DefineOption("b|branch", ref _branchName, "Name of branch.");
+                    syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
 
                 });
 
@@ -588,6 +589,9 @@ namespace ManagedCodeGen
             
             cijobsArgs.Add("--unzip");
             
+            cijobsArgs.Add("--output");
+            cijobsArgs.Add(toolPath);
+
             if (config.Verbose)
             {
                 Console.WriteLine("ci command: {0} {1}", "cijobs", String.Join(" ", cijobsArgs));

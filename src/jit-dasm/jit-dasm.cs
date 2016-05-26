@@ -521,6 +521,29 @@ namespace ManagedCodeGen
                                 result = generateCmd.Execute();
                             }
                         }
+                        
+                        if (result.ExitCode != 0)
+                        {
+                            Console.WriteLine("Error running {0} on {1}", _executablePath, fullPathAssembly);
+                            _errorCount++;
+
+                            // If the tool still produced a output file rename it to indicate
+                            // the error in the file system.
+                            if (File.Exists(path))
+                            {
+                                // Change file to *.err.
+                                string errorPath = Path.ChangeExtension(path, ".err");
+
+                                // If this is a rerun to the same output, overwrite with current
+                                // error output.
+                                if (File.Exists(errorPath))
+                                {
+                                    File.Delete(errorPath);
+                                }
+
+                                File.Move(path, errorPath);
+                            }
+                        }
                     }
                     else
                     {
@@ -528,12 +551,11 @@ namespace ManagedCodeGen
                         generateCmd.ForwardStdOut();
                         generateCmd.ForwardStdErr();
                         result = generateCmd.Execute();
-                    }
 
-                    if (result.ExitCode != 0)
-                    {
-                        Console.WriteLine("Error running {0} on {1}", _executablePath, fullPathAssembly);
-                        _errorCount++;
+                        if (result.ExitCode != 0)
+                        {
+                            _errorCount++;
+                        }
                     }
                 }
             }
