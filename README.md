@@ -1,12 +1,18 @@
 # Dotnet JIT code gen utilities - jitutils
 
-This repo holds a collection of utilites used by the Managed CodeGen team 
-to automate tasks when working on CoreCLR.  Initial utilies are around 
+This repo holds a collection of utilities used by the Managed CodeGen team 
+to automate tasks when working on CoreCLR.  Initial utilities are around 
 producing diffs of codegen changes.
 
 ## Summary
 
-To prepare the tools for use, from the root of the cloned mcgutils repo, do the following: 
+Copy down the appropraite `bootstrap.{cmd|sh}` for your platform and run it.  The script 
+will enlist in the jitutils project and perform the basics listed in the details section 
+following.
+
+### The details
+
+To prepare the tools for use, from the root of the cloned jitutils repo, do the following: 
 1. Download required package dependencies: `dotnet restore`
     * NOTE: On Mac, you need to first use `ulimit -n 2048` or the `dotnet restore` will fail.
 2. Build and publish the tools: `build.{cmd|sh} -f -p`
@@ -17,7 +23,7 @@ This will create the following directories in the repo root:
 
 Add each tool subdirectory to your path so you can easily invoke them, e.g.:
 ```
-set jitutils=<path to root of mcgutils clone>
+set jitutils=<path to root of jitutils clone>
 set PATH=%PATH%;%jitutils%\bin\jit-dasm;%jitutils%\bin\jit-diff;%jitutils%\bin\jit-analyze
 ```
 
@@ -99,7 +105,7 @@ Sample help commandline:
                              in base or only in diff).
         --json <arg>         Dump analysis data to specified file in JSON
                              format.
-        --csv <arg>          Dump analysis data to specified file in CSV
+        --tsv <arg>          Dump analysis data to specified file in TSV
                              format.
 ```
 

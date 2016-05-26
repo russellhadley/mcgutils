@@ -1,7 +1,7 @@
-# corediff - Diff CoreCLR tree
+# jit-diff - Diff CoreCLR tree
 
-corediff is a utility to produce diffs from a CoreCLR test layout via
-the mcgdiff tool.
+jit-diff is a utility to produce diffs from a CoreCLR test layout via
+the jit-dasm tool.
 
 To build/setup:
 
@@ -10,14 +10,14 @@ To build/setup:
 * Do 'dotnet restore' to create lock file and 
   pull down required packages.
 * Issue a 'dotnet build' command.  This will create a mcgdiff.dll in the bin
-  directory that you can use to drive creation of diffs. Tool may be invoked
-  via 'dotnet <path_to_corediffdll>corediff.dll.
-* Ensure that mcgdiff is on your path.  (See mcgdiff README.md for details
+  directory that you can use to drive creation of diffs.
+* Ensure that jit-dasm is on your path.  (See jit-dasm README.md for details
   on how to build)
-* invoke corediff.exe --frameworks --base `<base crossgen>` --diff `<diff crossgen>` 
+* invoke jit-diff.exe --frameworks --base `<base crossgen>` --diff `<diff crossgen>` 
   --coreroot `<path to core_root>` --testroot `<path to test_root>`
-* corediff can be installed by running the in-place installer in this repo via
+* jit-diff can be installed by running the project build script in the root of this repo 
+via
 
 ``` 
-    dotnet run <path to install project> -- <args>
+    $ ./build.{cmd|sh} -p
 ```

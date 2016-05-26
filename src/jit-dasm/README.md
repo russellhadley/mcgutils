@@ -1,6 +1,6 @@
-# mcgdiff - Managed CodeGen Difference
+# jit-dasm - Managed CodeGen Dasm Generator
 
-mcgdiff is a utility to drive the dotnet crossgen tool to produce
+jit-dasm is a utility to drive the dotnet crossgen tool to produce
 binary disassembly from the JIT compiler.  This can be used to create
 diffs to check ongoing development.
 
@@ -10,10 +10,11 @@ To build/setup:
   your path.
 * Do 'dotnet restore' to create lock file and 
   pull down required packages.
-* Issue a 'dotnet build' command.  This will create a mcgdiff.exe in the bin
+* Issue a 'dotnet build' command.  This will create a jit-dasm.exe in the bin
   directory that you can use to drive creation of diffs.
-* mcgdiff.exe can be installed by running the inplace installer in this repo
-  via
-  ``` 
-    dotnet run <path to install project> -- <args>
-  ```
+* jit-dasm can be installed by running the project build script in the root of this repo 
+via
+
+``` 
+    $ ./build.{cmd|sh} -p
+```

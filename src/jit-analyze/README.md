@@ -1,6 +1,6 @@
-# analyze - Managed CodeGen difference analysis tool
+# jit-analyze - Managed CodeGen difference analysis tool
 
-analyze is a utility to provide feedback on generated disassembly.
+jit-analyze is a utility to provide feedback on generated disassembly.
 The tool will produce the total bytes of difference and list of files 
 and methods sorted by contribution (size in bytes of regression/improvement)
 
@@ -17,7 +17,7 @@ To build/setup:
   
 The output of analyze looks like the following:
 ```
-$ analyze --base ~/Work/output/base --diff ~/Work/output/diff
+$ jit-analyze --base ~/Work/output/base --diff ~/Work/output/diff
 
 (Note: Lower is better)
 
