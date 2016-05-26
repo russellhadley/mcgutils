@@ -1,7 +1,7 @@
 # Dotnet JIT code gen utilities - jitutils
 
-This repo holds a collection of utilities used by the Managed CodeGen team 
-to automate tasks when working on CoreCLR.  Initial utilities are around 
+This repo holds a collection of utilities used by RyuJIT developers to 
+automate tasks when working on CoreCLR.  Initial utilities are around 
 producing diffs of codegen changes.
 
 ## Summary
@@ -39,21 +39,23 @@ building both a base and diff locally.
 Sample help commandline:
 ```
     $ jit-dasm --help
-
     usage: jit-dasm [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>] [-f <arg>]
-                   [-r] [-p <arg>] [--] <assembly>...
-        -b, --base <arg>        The base compiler exe.
-        -d, --diff <arg>        The diff compiler exe.
-        -o, --output <arg>      The output path.
-        -t, --tag <arg>         Name of root in output directory.  Allows
-                                for many sets of output.
-        -f, --file <arg>        Name of file to take list of assemblies
-                                from. Both a file and assembly list can be
-                                used.
-        -r, --recursive         Scan directories recursively.
-        -p, --platform <arg>    Path to platform assemblies
-        <assembly>...           The list of assemblies or directories to
-                                scan for assemblies.
+                    [--gcinfo] [-v] [-r] [-p <arg>...] [--] <assembly>...
+
+        -b, --base <arg>           The base compiler exe.
+        -d, --diff <arg>           The diff compiler exe.
+        -o, --output <arg>         The output path.
+        -t, --tag <arg>            Name of root in output directory.  Allows
+                                   for many sets of output.
+        -f, --file <arg>           Name of file to take list of assemblies
+                                   from. Both a file and assembly list can
+                                   be used.
+        --gcinfo                   Add GC info to the disasm output.
+        -v, --verbose              Enable verbose output.
+        -r, --recursive            Scan directories recursively.
+        -p, --platform <arg>...    Path to platform assemblies
+        <assembly>...              The list of assemblies or directories to
+                                   scan for assemblies.
 ```
 
 ## jit-diff
@@ -63,19 +65,32 @@ assemblies to use for generating assembly diffs and understands enough of the st
 to make it more streamlined.  jit-diff uses jit-dasm under the covers to produce the diffs so 
 for other projects a new utility could be produced that works in a similar way.
 
-Sample help commandline:
+Sample help commandlines:
 ```
     $ jit-diff --help
+    usage: jit-diff <command> [<args>]
 
-    usage: jit-diff [-b <arg>] [-d <arg>] [-o <arg>] [-t <arg>]
-                    [--core_root <arg>] [--test_root <arg>]
-        -b, --base <arg>      The base compiler exe.
-        -d, --diff <arg>      The diff compiler exe.
-        -o, --output <arg>    The output path.
-        -t, --tag <arg>       Name of root in output directory.  Allows for
-                              many sets of output.
-        --core_root <arg>     Path to test CORE_ROOT.
-        --test_root <arg>     Path to test tree
+        diff       Run asm diff of base/diff.
+        list       List defaults and available tools asmdiff.json.
+        install    Install tool in config.
+```
+```
+    $ jit-diff diff --help
+    usage: jit-diff diff [-b <arg>] [-d <arg>] [-o <arg>] [-a] [-t <arg>]
+                    [-m] [-f] [-v] [--core_root <arg>] [--test_root <arg>]
+
+        -b, --base <arg>        The base compiler exe or tag.
+        -d, --diff <arg>        The diff compiler exe or tag.
+        -o, --output <arg>      The output path.
+        -a, --analyze           Analyze resulting base, diff dasm
+                                directories.
+        -t, --tag <arg>         Name of root in output directory.  Allows
+                                for many sets of output.
+        -m, --mscorlibonly      Disasm mscorlib only
+        -f, --frameworksonly    Disasm frameworks only
+        -v, --verbose           Enable verbose output
+        --core_root <arg>       Path to test CORE_ROOT.
+        --test_root <arg>       Path to test tree.
 ```
 
 ## jit-analyze
@@ -88,25 +103,26 @@ part of the development progresses.
 Sample help commandline:
 ```
     $ jit-analyze --help
-    usage: jit-analyze [-b <arg>] [-d <arg>] [-r] [-f] [-c <arg>] [-w]
-                [--json <arg>] [--csv <arg>]
+    usage: jit-analyze [-b <arg>] [-d <arg>] [-r] [-c <arg>] [-w]
+                    [--reconcile] [--json <arg>] [--tsv <arg>]
 
-        -b, --base <arg>     Base file or directory.
-        -d, --diff <arg>     Diff file or directory.
-        -r, --recursive      Search directories recursively.
-        -f, --full           Output full analysis to stdout (rather than a
-                             summary).
-        -c, --count <arg>    Count of files and methods (at most) to output
-                             in the symmary. (count) improvements and
-                             (count) regressions of each will be included.
-                             (default 5)
+        -b, --base <arg>    Base file or directory.
+        -d, --diff <arg>    Diff file or directory.
+        -r, --recursive     Search directories recursively.
+        -c, --count <arg>   Count of files and methods (at most) to output
+                            in the summary. (count) improvements and
+                            (count) regressions of each will be included.
+                            (default 5)
         -w, --warn           Generate warning output for files/methods that
-                             only exists in one dataset or the other (only
-                             in base or only in diff).
-        --json <arg>         Dump analysis data to specified file in JSON
-                             format.
-        --tsv <arg>          Dump analysis data to specified file in TSV
-                             format.
+                            only exists in one dataset or the other (only
+                            in base or only in diff).
+        --reconcile         If there are methods that exist only in base or
+                            diff, create zero-sized counterparts in diff,
+                            and vice-versa. Update size deltas accordingly.
+        --json <arg>        Dump analysis data to specified file in JSON
+                            format.
+        --tsv <arg>         Dump analysis data to specified file in
+                            tab-separated format.
 ```
 
 ## packages

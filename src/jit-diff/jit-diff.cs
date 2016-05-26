@@ -74,7 +74,7 @@ namespace ManagedCodeGen
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
                     syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
                     syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
-                    syntax.DefineOption("test_root", ref _testPath, "Path to test tree");
+                    syntax.DefineOption("test_root", ref _testPath, "Path to test tree.");
 
                     // List command section.
                     syntax.DefineCommand("list", ref _command, Commands.List, 
