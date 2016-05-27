@@ -86,7 +86,7 @@ Sample help commandlines:
                                 directories.
         -t, --tag <arg>         Name of root in output directory.  Allows
                                 for many sets of output.
-        -m, --mscorlibonly      Disasm mscorlib only
+        -c, --corlibonly        Disasm *corlib only
         -f, --frameworksonly    Disasm frameworks only
         -v, --verbose           Enable verbose output
         --core_root <arg>       Path to test CORE_ROOT.
