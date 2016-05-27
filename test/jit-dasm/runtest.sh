@@ -1,13 +1,13 @@
-# Runs a set of simple tests to validate that mcgdiff is working
+# Runs a set of simple tests to validate that JITDASM is working
 #
 # Required input is a path to a single built CoreCLR repo as well as
-# the built mcgdiff executable.
+# the built JITDASM executable.
 #
 # Tests will run through the simple scenarios to ensure that the flags work,
 # as well as output structure being laid out as expected.
 #
 
-# Test 1: Run mcgdiff with the same crossgen to verify that --base, --diff
+# Test 1: Run JITDASM with the same crossgen to verify that --base, --diff
 # work with --frameworks and that the output is generated with the correct 
 # 'base' and 'diff' tags.
 
@@ -15,10 +15,10 @@
 
 # Process the incoming arguments and extract the location info needed.
 
-while getopts :m:c:o: opt; do
+while getopts :d:c:o: opt; do
     case $opt in
-        m)
-            MCGDIFF=$OPTARG
+        d)
+            JITDASM=$OPTARG
             ;;
         o)
             OUTPUT=$OPTARG
@@ -35,8 +35,8 @@ done
 
 # Test that we have the needed info to run the test.
 
-if [ -z "$MCGDIFF" ]; then
-    echo "Missing mcgdiff path."
+if [ -z "$JITDASM" ]; then
+    echo "Missing JITDASM path."
     exit -1
 fi
 
@@ -52,9 +52,9 @@ fi
 
 # Create disasm of mscorlib in base/diff form.
 
-echo Running: dotnet $MCGDIFF --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll
+echo Running: $JITDASM --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll
 
-if ! dotnet $MCGDIFF --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll; then
+if ! $JITDASM --base $CROSSGEN --diff $CROSSGEN --output $OUTPUT ${CROSSGEN%/*}/mscorlib.dll; then
     echo "Error! Managed code gen diff failed to generate disasm."
     exit -1
 fi
@@ -79,4 +79,4 @@ if ! diff $OUTPUT/diff/mscorlib.dasm $OUTPUT/base/mscorlib.dasm; then
     exit -1
 fi
 
-echo mcgdiff passed validation.
+echo $JITDASM passed validation.

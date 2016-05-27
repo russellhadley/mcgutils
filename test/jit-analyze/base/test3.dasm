@@ -197,4 +197,4 @@
 ; Assembly listing for method System.ArraySegment`1[__Canon][System.__Canon]:System.Collections.Generic.IList<T>.RemoveAt(int):this
 ; Total bytes of code 37, prolog size 5 for method System.ArraySegment`1[__Canon][System.__Canon]:System.Collections.Generic.IList<T>.RemoveAt(int):this
 ; Assembly listing for method System.ArraySegment`1[__Canon][System.__Canon]:System.Collections.Generic.IReadOnlyList<T>.get_Item(int):ref:this
-; Total bytes of code 167, prolog size 8 for method System.ArraySegment`1[__Canon][System.__Canon]:System.Collections.Generic.IReadOnlyList<T>.get_Item(int):ref:this
+; Total bytes of code 169, prolog size 8 for method System.ArraySegment`1[__Canon][System.__Canon]:System.Collections.Generic.IReadOnlyList<T>.get_Item(int):ref:this

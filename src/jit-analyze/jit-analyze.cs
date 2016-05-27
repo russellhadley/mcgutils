@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace ManagedCodeGen
 {
-    public class analyze
+    public class jitanalyze
     {
         public class Config
         {
@@ -336,11 +336,6 @@ namespace ManagedCodeGen
             {
                 Console.WriteLine("    diff is {0}", totalBytes < 0 ? "an improvement." : "a regression.");
             }
-            else
-            {
-                // Early out if there are not bytes of difference.
-                return totalBytes;
-            }
 
             if (config.Reconcile)
             {
@@ -360,7 +355,8 @@ namespace ManagedCodeGen
             int sortedFileCount = sortedFileDelta.Count();
             int fileCount = (sortedFileCount < requestedCount)
                 ? sortedFileCount : requestedCount;
-            if (sortedFileDelta[0].deltaBytes > 0)
+
+            if ((sortedFileCount > 0) && (sortedFileDelta[0].deltaBytes > 0))
             {
                 Console.WriteLine("\nTop file regressions by size (bytes):");
                 foreach (var fileDelta in sortedFileDelta.GetRange(0, fileCount)
@@ -370,7 +366,8 @@ namespace ManagedCodeGen
                 }
             }
 
-            if (sortedFileDelta.Last().deltaBytes < 0)
+
+            if ((sortedFileCount > 0) && (sortedFileDelta.Last().deltaBytes < 0))
             {
                 // index of the element count from the end.
                 int fileDeltaIndex = (sortedFileDelta.Count() - fileCount);
@@ -544,6 +541,7 @@ namespace ManagedCodeGen
             // (use git diff since it's already a dependency and cross platform)
             List<string> commandArgs = new List<string>();
             commandArgs.Add("diff");
+            commandArgs.Add("--no-index");
             commandArgs.Add("--exit-code");
             commandArgs.Add("--name-only");
             commandArgs.Add(diffPath);
@@ -577,35 +575,49 @@ namespace ManagedCodeGen
                 return 0;
             }
 
-            // Extract method info from base and diff directory or file.
-            var baseList = ExtractFileInfo(config.BasePath, config.Recursive);
-            var diffList = ExtractFileInfo(config.DiffPath, config.Recursive);
-
-            // Compare the method info for each file and generate a list of
-            // non-zero deltas.  The lists that include files in one but not
-            // the other are used as the comparator function only compares where it 
-            // has both sides.
-
-            var compareList = Comparator(baseList, diffList, config);
-
-            // Generate warning lists if requested.
-            if (config.Warn)
+            try
             {
-                WarnFiles(diffList, baseList);
-                WarnMethods(compareList);
-            }
+                // Extract method info from base and diff directory or file.
+                var baseList = ExtractFileInfo(config.BasePath, config.Recursive);
+                var diffList = ExtractFileInfo(config.DiffPath, config.Recursive);
+            
+                // Compare the method info for each file and generate a list of
+                // non-zero deltas.  The lists that include files in one but not
+                // the other are used as the comparator function only compares where it 
+                // has both sides.
 
-            if (config.DoGenerateTSV)
+                var compareList = Comparator(baseList, diffList, config);
+
+                // Generate warning lists if requested.
+                if (config.Warn)
+                {
+                    WarnFiles(diffList, baseList);
+                    WarnMethods(compareList);
+                }
+
+                if (config.DoGenerateTSV)
+                {
+                    GenerateTSV(compareList, config.TSVFileName);
+                }
+
+                if (config.DoGenerateJson)
+                {
+                    GenerateJson(compareList, config.JsonFileName);
+                }
+
+                return Summarize(compareList, config);
+            
+            }
+            catch (System.IO.DirectoryNotFoundException e)
             {
-                GenerateTSV(compareList, config.TSVFileName);
+                Console.WriteLine("Error: {0}", e.Message);
+                return 0;
             }
-
-            if (config.DoGenerateJson)
+            catch (System.IO.FileNotFoundException e)
             {
-                GenerateJson(compareList, config.JsonFileName);
+                Console.WriteLine("Error: {0}", e.Message);
+                return 0;
             }
-
-            return Summarize(compareList, config);
         }
     }
 }
