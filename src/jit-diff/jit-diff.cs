@@ -40,7 +40,7 @@ namespace ManagedCodeGen
             private string _tag = null;
             private string _platformPath = null;
             private string _testPath = null;
-            private bool _mscorlibOnly = false;
+            private bool _corlibOnly = false;
             private bool _frameworksOnly = false;
             private bool _verbose = false;
             private string _jobName;
@@ -70,7 +70,7 @@ namespace ManagedCodeGen
                         "Analyze resulting base, diff dasm directories.");
                     syntax.DefineOption("t|tag", ref _tag, 
                         "Name of root in output directory.  Allows for many sets of output.");
-                    syntax.DefineOption("m|mscorlibonly", ref _mscorlibOnly, "Disasm mscorlib only");
+                    syntax.DefineOption("c|corlibonly", ref _corlibOnly, "Disasm *CorLib only");
                     syntax.DefineOption("f|frameworksonly", ref _frameworksOnly, "Disasm frameworks only");
                     syntax.DefineOption("v|verbose", ref _verbose, "Enable verbose output");
                     syntax.DefineOption("core_root", ref _platformPath, "Path to test CORE_ROOT.");
@@ -210,7 +210,7 @@ namespace ManagedCodeGen
                     _syntaxResult.ReportError("Specifiy --core_root <path>");
                 }
 
-                if ((_mscorlibOnly == false) &&
+                if ((_corlibOnly == false) &&
                     (_frameworksOnly == false) && (_testPath == null))
                 {
                     _syntaxResult.ReportError("Specify --test_root <path>");
@@ -337,9 +337,9 @@ namespace ManagedCodeGen
                             var analyze = ExtractDefault<bool>("analyze", out found);
                             _analyze = (found) ? analyze : _analyze;
                             
-                            // Set flag from default for mscorlib only.
-                            var mscorlibOnly = ExtractDefault<bool>("mscorlibonly", out found);
-                            _mscorlibOnly = (found) ? mscorlibOnly : _mscorlibOnly;
+                            // Set flag from default for corlib only.
+                            var corlibOnly = ExtractDefault<bool>("corlibonly", out found);
+                            _corlibOnly = (found) ? corlibOnly : _corlibOnly;
                             
                             // Set flag from default for frameworks only.
                             var frameworksOnly = ExtractDefault<bool>("frameworksonly", out found);
@@ -417,7 +417,7 @@ namespace ManagedCodeGen
                     PrintDefault<string>("core_root");
                     PrintDefault<string>("test_root");
                     PrintDefault<string>("analyze");
-                    PrintDefault<string>("mscorlibonly");
+                    PrintDefault<string>("corlibonly");
                     PrintDefault<string>("frameworksonly");
                     PrintDefault<string>("tag");
                     PrintDefault<string>("verbose");
@@ -443,11 +443,11 @@ namespace ManagedCodeGen
             public string OutputPath { get { return _outputPath; } }
             public string Tag { get { return _tag; } }
             public bool HasTag { get { return (_tag != null); } }
-            public bool MSCorelibOnly { get { return _mscorlibOnly; } }
+            public bool CoreLibOnly { get { return _corlibOnly; } }
             public bool FrameworksOnly { get { return _frameworksOnly; } }
             public bool DoMSCorelib { get { return true; } }
-            public bool DoFrameworks { get { return !_mscorlibOnly; } }
-            public bool DoTestTree { get { return (!_mscorlibOnly && !_frameworksOnly); } }
+            public bool DoFrameworks { get { return !_corlibOnly; } }
+            public bool DoTestTree { get { return (!_corlibOnly && !_frameworksOnly); } }
             public bool Verbose { get { return _verbose; } }
             public bool DoAnalyze { get { return _analyze; } }
             public Commands DoCommand { get { return _command; } }
@@ -640,7 +640,7 @@ namespace ManagedCodeGen
         
         public static int DiffCommand(Config config)
         {
-            string diffString = "mscorlib.dll";
+            string diffString = "System.Private.CoreLib.dll";
 
             if (config.DoFrameworks)
             {
@@ -694,10 +694,10 @@ namespace ManagedCodeGen
                 commandArgs.Add("--verbose");
             }
 
-            if (config.MSCorelibOnly)
+            if (config.CoreLibOnly)
             {
                 string coreRoot = config.CoreRoot;
-                string fullPathAssembly = Path.Combine(coreRoot, "mscorlib.dll");
+                string fullPathAssembly = Path.Combine(coreRoot, "System.Private.CoreLib.dll");
                 commandArgs.Add(fullPathAssembly);
             }
             else

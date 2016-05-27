@@ -393,7 +393,7 @@ namespace ManagedCodeGen
             int sortedMethodCount = sortedMethodDelta.Count();
             int methodCount = (sortedMethodCount < requestedCount)
                 ? sortedMethodCount : requestedCount;
-            if (sortedMethodDelta[0].deltaBytes > 0)
+            if ((sortedMethodCount > 0) && (sortedMethodDelta[0].deltaBytes > 0))
             {
                 Console.WriteLine("\nTop method regessions by size (bytes):");
 
@@ -404,7 +404,7 @@ namespace ManagedCodeGen
                 }
             }
 
-            if (sortedMethodDelta.Last().deltaBytes < 0)
+            if ((sortedMethodCount > 0) && (sortedMethodDelta.Last().deltaBytes < 0))
             {
                 // index of the element count from the end.
                 int methodDeltaIndex = (sortedMethodCount - methodCount);
