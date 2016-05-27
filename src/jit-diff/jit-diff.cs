@@ -468,6 +468,7 @@ namespace ManagedCodeGen
 
         private static string[] s_frameworkAssemblies =
         {
+            "System.Private.CoreLib.dll",
             "mscorlib.dll",
             "System.Runtime.dll",
             "System.Runtime.Extensions.dll",
